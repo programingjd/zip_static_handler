@@ -1,0 +1,20 @@
+[package]
+name = "zip_static_handler"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.zip_structs]
+version = "0.2"
+default-features = false
+features = []
+
+[dependencies.http]
+version = "1.0"
+default-features = false
+features = ["std"]
+
+[dev-dependencies.reqwest]
+version = "0.11"
+features = ["blocking", "rustls-tls"]
