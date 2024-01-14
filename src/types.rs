@@ -1,8 +1,7 @@
+use crate::headers::{default_headers, header_name, header_value};
 use http::header::{CACHE_CONTROL, CONTENT_TYPE};
-use http::{HeaderMap, HeaderName, HeaderValue};
-use std::cell::OnceCell;
+use http::HeaderMap;
 
-const DEFAULT_HEADERS: OnceCell<HeaderMap> = OnceCell::new();
 const CACHE_CONTROL_NO_CACHE: &str =
     "public,no-cache,max-age=0,must-revalidate;stale-if-error=3600";
 const CACHE_CONTROL_REVALIDATE: &str = "public,max-age=3600,must-revalidate,stale-if-error=3600";
@@ -40,21 +39,4 @@ fn headers(content_type: &'static str, cache_control: &'static str) -> HeaderMap
     headers.append(CONTENT_TYPE, header_value(content_type));
     headers.append(CACHE_CONTROL, header_value(cache_control));
     headers
-}
-
-fn default_headers() -> HeaderMap {
-    DEFAULT_HEADERS
-        .get_or_init(|| {
-            let headers = HeaderMap::new();
-            headers
-        })
-        .clone()
-}
-
-fn header_name(bytes: &'static str) -> HeaderName {
-    HeaderName::from_static(bytes)
-}
-
-fn header_value(bytes: &'static str) -> HeaderValue {
-    HeaderValue::from_static(bytes)
 }

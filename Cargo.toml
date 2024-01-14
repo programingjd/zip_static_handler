@@ -15,6 +15,16 @@ version = "1.0"
 default-features = false
 features = ["std"]
 
+[dependencies.inflate]
+version = "0.4"
+default-features = false
+features = []
+
+[dependencies.brotli]
+version = "3.4"
+default-features = false
+features = ["std"]
+
 [dev-dependencies.reqwest]
 version = "0.11"
 features = ["blocking", "rustls-tls"]
