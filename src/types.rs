@@ -1,11 +1,10 @@
 use crate::headers::default_headers;
 use crate::http::headers::{Line, CACHE_CONTROL, CONTENT_TYPE, SERVICE_WORKER_ALLOWED};
 
-const CACHE_CONTROL_NO_CACHE: &'static [u8] =
+const CACHE_CONTROL_NO_CACHE: &[u8] =
     b"public,no-cache,max-age=0,must-revalidate;stale-if-error=3600";
-const CACHE_CONTROL_REVALIDATE: &'static [u8] =
-    b"public,max-age=3600,must-revalidate,stale-if-error=3600";
-const CACHE_CONTROL_IMMUTABLE: &'static [u8] =
+const CACHE_CONTROL_REVALIDATE: &[u8] = b"public,max-age=3600,must-revalidate,stale-if-error=3600";
+const CACHE_CONTROL_IMMUTABLE: &[u8] =
     b"public,max-age=86400,immutable,stale-while-revalidate=864000,stale-if-error=3600";
 
 pub(crate) fn headers_for_type(
@@ -18,9 +17,10 @@ pub(crate) fn headers_for_type(
         "js" | "mjs" | "map" => Some((
             if filename.starts_with("service-worker.") || filename.starts_with("sw.") {
                 let headers = headers(b"application/javascript", CACHE_CONTROL_NO_CACHE);
-                Box::new(headers.chain(
-                    vec![Line::with_array_ref_value(SERVICE_WORKER_ALLOWED, b"/")].into_iter(),
-                ))
+                Box::new(headers.chain(vec![Line::with_array_ref_value(
+                    SERVICE_WORKER_ALLOWED,
+                    b"/",
+                )]))
             } else {
                 headers(b"application/javascript", CACHE_CONTROL_REVALIDATE)
             },
@@ -47,5 +47,5 @@ fn headers(
         Line::with_slice_value(CONTENT_TYPE, content_type),
         Line::with_slice_value(CACHE_CONTROL, cache_control),
     ];
-    Box::new(default_headers.chain(new_headers.into_iter()))
+    Box::new(default_headers.chain(new_headers))
 }

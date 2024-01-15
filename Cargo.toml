@@ -26,7 +26,41 @@ version = "1.4"
 default-features = false
 features = []
 
+[dependencies.tracing]
+version = "0.1"
+default-features = false
+features = ["std", "attributes"]
+
 [dev-dependencies.reqwest]
 version = "0.11"
 features = ["blocking", "rustls-tls"]
 
+[dev-dependencies.tracing-subscriber]
+version = "0.3"
+default-features = true
+features = ["env-filter"]
+
+[dev-dependencies.test-tracing]
+path = "test-tracing"
+
+[workspace]
+members = ["test-tracing"]
+
+[[example]]
+name = "hyper"
+[dependencies.http-body-util]
+version = "0.1"
+default-features = false
+features = []
+[dependencies.hyper]
+version = "1.1"
+default-features = false
+features = ["full"]
+[dependencies.hyper-util]
+version = "0.1"
+default-features = false
+features = ["tokio"]
+[dependencies.tokio]
+version = "1.35"
+default-features = false
+features = ["full"]

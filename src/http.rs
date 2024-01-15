@@ -13,7 +13,7 @@ impl Clone for OwnedOrStatic {
     }
 }
 
-impl AsRef<[u8]> for &OwnedOrStatic {
+impl AsRef<[u8]> for OwnedOrStatic {
     fn as_ref(&self) -> &[u8] {
         match self {
             OwnedOrStatic::Owned(vec) => vec,
@@ -80,7 +80,7 @@ pub mod headers {
 
     impl AsRef<Line> for Line {
         fn as_ref(&self) -> &Line {
-            &self
+            self
         }
     }
 
@@ -113,6 +113,7 @@ pub mod headers {
 }
 
 pub mod response {
+    use crate::errors::Result;
     use crate::http::headers::Line;
 
     pub enum StatusCode {
@@ -126,9 +127,9 @@ pub mod response {
         PreconditionFailed,
     }
 
-    impl Into<u16> for StatusCode {
-        fn into(self) -> u16 {
-            match self {
+    impl From<StatusCode> for u16 {
+        fn from(value: StatusCode) -> Self {
+            match value {
                 StatusCode::OK => 200,
                 StatusCode::NotModified => 304,
                 StatusCode::TemporaryRedirect => 307,
@@ -141,10 +142,9 @@ pub mod response {
         }
     }
 
-    pub trait Builder<R, H: super::headers::Headers> {
-        fn with_status(&mut self, code: StatusCode) -> Self;
-        fn append_headers(&mut self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self;
-        fn with_body(&mut self, body: Option<&[u8]>) -> R;
+    pub trait Builder<R> {
+        fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self;
+        fn with_body(self, body: Option<&[u8]>) -> Result<R>;
     }
 }
 
@@ -155,17 +155,12 @@ pub mod method {
 }
 
 pub mod request {
-    use crate::http::headers::Headers;
-    use crate::http::response::Builder;
-    use std::io::Read;
+    use crate::http::response::{Builder, StatusCode};
 
-    pub trait Request<R, H: Headers, B: Builder<R, H>> {
+    pub trait Request<R, B: Builder<R>> {
         fn method(&self) -> &[u8];
         fn path(&self) -> &[u8];
         fn first_header_value(&self, key: &'static [u8]) -> Option<&[u8]>;
-        fn read_body(&mut self, read: impl Read);
-
-        fn new_headers() -> H;
-        fn new_response_builder() -> B;
+        fn response_builder_with_status(code: StatusCode) -> B;
     }
 }
