@@ -82,7 +82,7 @@ impl Handler {
 }
 
 impl<'a, Z: WithoutZipPrefix, R: RootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_zip_prefix(self: Self, prefix: impl Into<String>) -> Builder<'a, String, R, D, B> {
+    pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, String, R, D, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: prefix.into(),
@@ -94,7 +94,7 @@ impl<'a, Z: WithoutZipPrefix, R: RootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, 
 }
 
 impl<'a, Z: ZipPrefix, R: WithoutRootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_root_prefix(self: Self, prefix: impl Into<String>) -> Builder<'a, Z, String, D, B> {
+    pub fn with_root_prefix(self, prefix: impl Into<String>) -> Builder<'a, Z, String, D, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
@@ -106,7 +106,7 @@ impl<'a, Z: ZipPrefix, R: WithoutRootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, 
 }
 
 impl<'a, Z: ZipPrefix, R: RootPrefix, D: WithDiff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_diff(self: Self, diff: &'a Handler) -> Builder<'a, Z, R, &'a Handler, B> {
+    pub fn with_diff(self, diff: &'a Handler) -> Builder<'a, Z, R, &'a Handler, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
@@ -118,7 +118,7 @@ impl<'a, Z: ZipPrefix, R: RootPrefix, D: WithDiff<'a>, B: Bytes> Builder<'a, Z, 
 }
 
 impl<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: WithoutBytes> Builder<'a, Z, R, D, B> {
-    pub fn with_zip<T: Borrow<[u8]>>(self: Self, bytes: T) -> Builder<'a, Z, R, D, T> {
+    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, Z, R, D, T> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
@@ -130,15 +130,11 @@ impl<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: WithoutBytes> Builder<'a, 
 }
 
 impl<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: Borrow<[u8]>> Builder<'a, Z, R, D, B> {
-    pub fn try_build(self: Self) -> Result<Handler> {
+    pub fn try_build(self) -> Result<Handler> {
         Handler::try_new(
             self.bytes,
-            self.root_prefix
-                .root_prefix()
-                .unwrap_or_else(|| "".to_string()),
-            self.zip_prefix
-                .zip_prefix()
-                .unwrap_or_else(|| "".to_string()),
+            self.root_prefix.root_prefix().unwrap_or_default(),
+            self.zip_prefix.zip_prefix().unwrap_or_default(),
             self.diff.diff(),
         )
     }

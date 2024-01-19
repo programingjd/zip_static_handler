@@ -1,5 +1,5 @@
-use crate::compression::{brotli, inflate};
-use crate::errors::{Error, Result};
+use crate::compression::{brotli, decompress};
+use crate::errors::Result;
 use crate::headers::{default_headers, error_headers};
 use crate::http::headers::{
     Line, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
@@ -9,7 +9,7 @@ use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
 use crate::path::{extension, filename, path};
 use crate::types::headers_for_type;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::iter::once;
@@ -46,11 +46,13 @@ impl Handler {
             let headers = &file.headers;
             if file.etag.is_some() {
                 let etag = file.etag.as_ref().map(|it| it.as_bytes());
-                if request.first_header_value(IF_NONE_MATCH) == etag {
+                let none_match = request.first_header_value(IF_NONE_MATCH);
+                let if_match = request.first_header_value(IF_MATCH);
+                if none_match.is_some() && none_match == etag {
                     T::response_builder_with_status(StatusCode::NotModified)
                         .append_headers(headers.iter())
                         .with_body(None)
-                } else if request.first_header_value(IF_MATCH) != etag {
+                } else if if_match.is_some() && if_match != etag {
                     T::response_builder_with_status(StatusCode::PreconditionFailed)
                         .append_headers(headers.iter())
                         .with_body(None)
@@ -81,7 +83,7 @@ impl Handler {
 }
 
 impl Handler {
-    pub fn try_new(
+    pub(crate) fn try_new(
         zip: impl Borrow<[u8]>,
         root_prefix: impl AsRef<str>,
         zip_prefix: impl AsRef<str>,
@@ -138,7 +140,7 @@ fn build_entry(
     cursor: &mut Cursor<&[u8]>,
     zip_prefix: &str,
     entry: &ZipCDEntry,
-    entries: &Vec<ZipCDEntry>,
+    entries: &[ZipCDEntry],
     previous: Option<&Handler>,
 ) -> Result<Option<(String, Entry)>> {
     let name = String::from_utf8(entry.file_name_raw.clone())?;
@@ -161,52 +163,41 @@ fn build_entry(
         let headers = headers.deref_mut();
         let path = path(zip_prefix, &name);
         debug!(path = path);
-        let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, &entry)?;
-        let etag = format!("{:x}", zip_file_header.crc32);
+        let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
+        let crc32 = zip_file_header.crc32;
+        let etag = format!("{:x}", crc32);
         trace!(etag = etag.as_str());
         let mut headers: Vec<Line> = headers
             .chain(once(Line::with_owned_value(ETAG, etag.as_bytes().to_vec())))
             .collect();
         let etag = Some(etag);
-        let pre_compressed = false;
         let content = Some(if compressed {
-            match zip_file_header.compression_method {
-                0u16 => {
-                    if pre_compressed {
-                        zip_file_header.compressed_data.to_vec()
-                    } else {
-                        brotli(
-                            zip_file_header.compressed_data.as_ref(),
-                            zip_file_header.compressed_size as usize,
-                        )
-                    }
+            let compressed_name = format!("{name}.br");
+            let compressed_name_raw = compressed_name.as_bytes();
+            if let Some(entry) = entries
+                .iter()
+                .find(|it| it.file_name_raw == compressed_name_raw && it.crc32 == crc32)
+            {
+                let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
+                match decompress(zip_file_header)? {
+                    Cow::Owned(it) => it,
+                    Cow::Borrowed(it) => it.to_vec(),
                 }
-                8u16 => {
-                    if pre_compressed {
-                        inflate(
-                            zip_file_header.compressed_data.as_ref(),
-                            zip_file_header.uncompressed_size as usize,
-                        )
-                    } else {
-                        brotli(
-                            &inflate(
-                                zip_file_header.compressed_data.as_ref(),
-                                zip_file_header.uncompressed_size as usize,
-                            ),
-                            zip_file_header.compressed_size as usize,
-                        )
-                    }
-                }
-                _ => return Err(Error::Message("unsupported compression")),
+            } else if let Some(entry) = previous.and_then(|it| {
+                it.files
+                    .get(&compressed_name)
+                    .filter(|&entry| entry.etag == etag)
+            }) {
+                entry.content.clone().unwrap()
+            } else {
+                debug!("brotli {path}", path = path);
+                let compressed_size = zip_file_header.compressed_size as usize;
+                brotli(decompress(zip_file_header)?.as_ref(), compressed_size)
             }
         } else {
-            match zip_file_header.compression_method {
-                0u16 => zip_file_header.compressed_data.to_vec(),
-                8u16 => inflate(
-                    zip_file_header.compressed_data.as_ref(),
-                    zip_file_header.uncompressed_size as usize,
-                ),
-                _ => return Err(Error::Message("unsupported compression")),
+            match decompress(zip_file_header)? {
+                Cow::Owned(it) => it,
+                Cow::Borrowed(it) => it.to_vec(),
             }
         });
         if let Some(ref content) = content {
@@ -258,7 +249,7 @@ mod tests {
             "43fc826fd10790699f882a8d37d2c3da6192a499",
         ));
         let handler = Handler::builder()
-            .with_root_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
+            .with_zip_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
             .with_zip(zip)
             .try_build();
         assert!(handler.is_ok());

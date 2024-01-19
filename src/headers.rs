@@ -14,7 +14,7 @@ lazy_static! {
             (CORP, b"same-site".as_slice()),
             (COEP, b"crendentialless".as_slice()),
             (COOP, b"same-origin".as_slice()),
-            (CSP, b"default-src 'self';script-src 'self' 'unsafe-inline';script-src-attr 'none' 'wasm-unsafe-eval';worker-src 'self' blob:;style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;frame-src 'none';object-src 'none';base-uri 'none';frame-ancestors 'none';form-action 'none'".as_slice()),
+            (CSP, b"default-src 'self';script-src 'wasm-unsafe-eval';script-src-elem 'self' 'unsafe-inline';script-src-attr 'none';worker-src 'self' blob:;style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;frame-src 'none';object-src 'none';base-uri 'none';frame-ancestors 'none';form-action 'none'".as_slice()),
             (HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
         ];
         headers

@@ -42,16 +42,15 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sy
     ))
     .await?;
     let handler = Arc::new(
-        Handler::try_new(
-            "",
-            "about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/",
-            &zip,
-        )
-        .map_err(|err| {
-            Box::new(ErrorAdapter {
-                message: err.to_string(),
-            })
-        })?,
+        Handler::builder()
+            .with_zip_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
+            .with_zip(zip)
+            .try_build()
+            .map_err(|err| {
+                Box::new(ErrorAdapter {
+                    message: err.to_string(),
+                })
+            })?,
     );
     loop {
         let (stream, _remote_address) = listener.accept().await?;
