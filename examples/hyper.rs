@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::spawn;
 use zip_static_handler::errors::{Error, Result};
-use zip_static_handler::github::zip_download_commit_url;
+use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::Handler;
 use zip_static_handler::http::headers::Line;
 use zip_static_handler::http::request::Request;
@@ -35,15 +35,15 @@ async fn download(
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
-    let zip = download(&zip_download_commit_url(
+    let zip = download(&zip_download_branch_url(
         "programingjd",
         "about.programingjd.me",
-        "43fc826fd10790699f882a8d37d2c3da6192a499",
+        "main",
     ))
     .await?;
     let handler = Arc::new(
         Handler::builder()
-            .with_zip_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
+            .with_zip_prefix("about.programingjd.me-main/")
             .with_zip(zip)
             .try_build()
             .map_err(|err| {

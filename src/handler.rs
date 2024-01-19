@@ -246,10 +246,10 @@ mod tests {
         let zip = download(&zip_download_commit_url(
             "programingjd",
             "about.programingjd.me",
-            "43fc826fd10790699f882a8d37d2c3da6192a499",
+            "b9ea1260114c63a9d5761fe214b85299cc617c5c",
         ));
         let handler = Handler::builder()
-            .with_zip_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
+            .with_zip_prefix("about.programingjd.me-b9ea1260114c63a9d5761fe214b85299cc617c5c/")
             .with_zip(zip)
             .try_build();
         assert!(handler.is_ok());
