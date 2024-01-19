@@ -1,3 +1,4 @@
+mod builder;
 mod compression;
 pub mod errors;
 pub mod github;

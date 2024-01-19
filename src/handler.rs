@@ -9,6 +9,7 @@ use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
 use crate::path::{extension, filename, path};
 use crate::types::headers_for_type;
+use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::iter::once;
@@ -81,19 +82,23 @@ impl Handler {
 
 impl Handler {
     pub fn try_new(
-        route_prefix: impl AsRef<str>,
+        zip: impl Borrow<[u8]>,
+        root_prefix: impl AsRef<str>,
         zip_prefix: impl AsRef<str>,
-        zip: &[u8],
-    ) -> crate::errors::Result<Handler> {
-        let route_prefix = route_prefix.as_ref();
+        previous: Option<&Handler>,
+    ) -> Result<Handler> {
+        let route_prefix = root_prefix.as_ref();
         let zip_prefix = zip_prefix.as_ref();
         trace!(route_prefix = route_prefix, zip_prefix = zip_prefix);
-        let mut cursor = Cursor::new(zip);
+        let mut cursor = Cursor::new(zip.borrow());
         let directory = ZipEOCD::from_reader(&mut cursor)?;
         let mut routes = HashMap::new();
-        for entry in ZipCDEntry::all_from_eocd(&mut cursor, &directory)? {
-            if let Some((path, value)) = build_entry(&mut cursor, entry, zip_prefix)? {
-                if path.ends_with('/') {
+        let entries = ZipCDEntry::all_from_eocd(&mut cursor, &directory)?;
+        for entry in &entries {
+            if let Some((path, value)) =
+                build_entry(&mut cursor, zip_prefix, entry, &entries, previous)?
+            {
+                if path.ends_with('/') && path.len() > 1 {
                     let no_trailing_slash = &path[..path.len() - 1];
                     routes.insert(
                         format!("{route_prefix}{path}"),
@@ -109,7 +114,7 @@ impl Handler {
     }
 }
 
-struct Entry {
+pub(crate) struct Entry {
     headers: Vec<Line>,
     content: Option<Vec<u8>>,
     etag: Option<String>,
@@ -131,9 +136,11 @@ fn redirect_entry(path: &str) -> Entry {
 
 fn build_entry(
     cursor: &mut Cursor<&[u8]>,
-    entry: ZipCDEntry,
     zip_prefix: &str,
-) -> crate::errors::Result<Option<(String, Entry)>> {
+    entry: &ZipCDEntry,
+    entries: &Vec<ZipCDEntry>,
+    previous: Option<&Handler>,
+) -> Result<Option<(String, Entry)>> {
     let name = String::from_utf8(entry.file_name_raw.clone())?;
     trace!(entry_name = name);
     if !name.starts_with(zip_prefix) {
@@ -145,9 +152,9 @@ fn build_entry(
         trace!("entry skipped");
         return Ok(None);
     }
-    let (extension, precompressed) = match extension(filename) {
-        "br" => (extension(&filename[..filename.len() - 3]), true),
-        ext => (ext, false),
+    let extension = extension(filename);
+    if extension == "br" {
+        return Ok(None);
     };
     trace!(extension = extension);
     if let Some((mut headers, compressed)) = headers_for_type(filename, extension) {
@@ -161,10 +168,11 @@ fn build_entry(
             .chain(once(Line::with_owned_value(ETAG, etag.as_bytes().to_vec())))
             .collect();
         let etag = Some(etag);
+        let pre_compressed = false;
         let content = Some(if compressed {
             match zip_file_header.compression_method {
                 0u16 => {
-                    if precompressed {
+                    if pre_compressed {
                         zip_file_header.compressed_data.to_vec()
                     } else {
                         brotli(
@@ -174,7 +182,7 @@ fn build_entry(
                     }
                 }
                 8u16 => {
-                    if precompressed {
+                    if pre_compressed {
                         inflate(
                             zip_file_header.compressed_data.as_ref(),
                             zip_file_header.uncompressed_size as usize,
@@ -249,11 +257,10 @@ mod tests {
             "about.programingjd.me",
             "43fc826fd10790699f882a8d37d2c3da6192a499",
         ));
-        let handler = Handler::try_new(
-            "",
-            "about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/",
-            &zip,
-        );
+        let handler = Handler::builder()
+            .with_root_prefix("about.programingjd.me-43fc826fd10790699f882a8d37d2c3da6192a499/")
+            .with_zip(zip)
+            .try_build();
         assert!(handler.is_ok());
         let handler = handler.unwrap();
         let favicon = handler.files.get("/favicon.png");
