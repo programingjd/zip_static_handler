@@ -1,6 +1,5 @@
 use crate::compression::{brotli, decompress};
 use crate::errors::Result;
-use crate::headers::{default_headers, error_headers};
 use crate::http::headers::{
     Line, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
 };
@@ -8,19 +7,16 @@ use crate::http::method;
 use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
 use crate::path::{extension, filename, path};
-use crate::types::headers_for_type;
-use std::borrow::{Borrow, Cow};
+use crate::types::error_headers;
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::iter::once;
-use std::ops::DerefMut;
 use tracing::{debug, trace};
 use zip_structs::zip_central_directory::ZipCDEntry;
-use zip_structs::zip_eocd::ZipEOCD;
 use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
 pub struct Handler {
-    files: HashMap<String, Entry>,
+    pub(crate) files: HashMap<String, Entry>,
 }
 
 impl Handler {
@@ -82,39 +78,39 @@ impl Handler {
     }
 }
 
-impl Handler {
-    pub(crate) fn try_new(
-        zip: impl Borrow<[u8]>,
-        root_prefix: impl AsRef<str>,
-        zip_prefix: impl AsRef<str>,
-        previous: Option<&Handler>,
-    ) -> Result<Handler> {
-        let route_prefix = root_prefix.as_ref();
-        let zip_prefix = zip_prefix.as_ref();
-        trace!(route_prefix = route_prefix, zip_prefix = zip_prefix);
-        let mut cursor = Cursor::new(zip.borrow());
-        let directory = ZipEOCD::from_reader(&mut cursor)?;
-        let mut routes = HashMap::new();
-        let entries = ZipCDEntry::all_from_eocd(&mut cursor, &directory)?;
-        for entry in &entries {
-            if let Some((path, value)) =
-                build_entry(&mut cursor, zip_prefix, entry, &entries, previous)?
-            {
-                if path.ends_with('/') && path.len() > 1 {
-                    let no_trailing_slash = &path[..path.len() - 1];
-                    routes.insert(
-                        format!("{route_prefix}{path}"),
-                        redirect_entry(no_trailing_slash),
-                    );
-                    routes.insert(format!("{route_prefix}{no_trailing_slash}"), value);
-                } else {
-                    routes.insert(path, value);
-                }
-            }
-        }
-        Ok(Handler { files: routes })
-    }
-}
+// impl Handler {
+//     pub(crate) fn try_new(
+//         zip: impl Borrow<[u8]>,
+//         root_prefix: impl AsRef<str>,
+//         zip_prefix: impl AsRef<str>,
+//         previous: Option<&Handler>,
+//     ) -> Result<Handler> {
+//         let route_prefix = root_prefix.as_ref();
+//         let zip_prefix = zip_prefix.as_ref();
+//         trace!(route_prefix = route_prefix, zip_prefix = zip_prefix);
+//         let mut cursor = Cursor::new(zip.borrow());
+//         let directory = ZipEOCD::from_reader(&mut cursor)?;
+//         let mut routes = HashMap::new();
+//         let entries = ZipCDEntry::all_from_eocd(&mut cursor, &directory)?;
+//         for entry in &entries {
+//             if let Some((path, value)) =
+//                 build_entry(&mut cursor, zip_prefix, entry, &entries, previous)?
+//             {
+//                 if path.ends_with('/') && path.len() > 1 {
+//                     let no_trailing_slash = &path[..path.len() - 1];
+//                     routes.insert(
+//                         format!("{route_prefix}{path}"),
+//                         redirect_entry(no_trailing_slash),
+//                     );
+//                     routes.insert(format!("{route_prefix}{no_trailing_slash}"), value);
+//                 } else {
+//                     routes.insert(path, value);
+//                 }
+//             }
+//         }
+//         Ok(Handler { files: routes })
+//     }
+// }
 
 pub(crate) struct Entry {
     headers: Vec<Line>,
@@ -122,13 +118,21 @@ pub(crate) struct Entry {
     etag: Option<String>,
 }
 
-fn redirect_entry(path: &str) -> Entry {
-    let headers = default_headers()
-        .chain(once(Line::with_owned_value(
-            LOCATION,
-            path.as_bytes().to_vec(),
-        )))
-        .collect();
+pub trait HeaderSelector {
+    fn headers_for_extension(
+        &self,
+        filename: &str,
+        extension: &str,
+    ) -> Option<HeadersAndCompression>;
+}
+
+pub struct HeadersAndCompression {
+    pub headers: Vec<Line>,
+    pub compressible: bool,
+}
+
+pub(crate) fn redirect_entry(path: &str) -> Entry {
+    let headers = vec![Line::with_owned_value(LOCATION, path.as_bytes().to_vec())];
     Entry {
         headers,
         content: None,
@@ -136,11 +140,12 @@ fn redirect_entry(path: &str) -> Entry {
     }
 }
 
-fn build_entry(
+pub(crate) fn build_entry(
     cursor: &mut Cursor<&[u8]>,
     zip_prefix: &str,
     entry: &ZipCDEntry,
     entries: &[ZipCDEntry],
+    header_selector: &dyn HeaderSelector,
     previous: Option<&Handler>,
 ) -> Result<Option<(String, Entry)>> {
     let name = String::from_utf8(entry.file_name_raw.clone())?;
@@ -159,19 +164,20 @@ fn build_entry(
         return Ok(None);
     };
     trace!(extension = extension);
-    if let Some((mut headers, compressed)) = headers_for_type(filename, extension) {
-        let headers = headers.deref_mut();
+    if let Some(HeadersAndCompression {
+        mut headers,
+        compressible,
+    }) = header_selector.headers_for_extension(filename, extension)
+    {
         let path = path(zip_prefix, &name);
         debug!(path = path);
         let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
         let crc32 = zip_file_header.crc32;
         let etag = format!("{:x}", crc32);
         trace!(etag = etag.as_str());
-        let mut headers: Vec<Line> = headers
-            .chain(once(Line::with_owned_value(ETAG, etag.as_bytes().to_vec())))
-            .collect();
+        headers.push(Line::with_owned_value(ETAG, etag.as_bytes().to_vec()));
         let etag = Some(etag);
-        let content = Some(if compressed {
+        let content = Some(if compressible {
             let compressed_name = format!("{name}.br");
             let compressed_name_raw = compressed_name.as_bytes();
             if let Some(entry) = entries
@@ -205,7 +211,7 @@ fn build_entry(
                 CONTENT_LENGTH,
                 format!("{}", content.len()).into_bytes(),
             ));
-            if compressed {
+            if compressible {
                 headers.push(Line::with_array_ref_value(CONTENT_ENCODING, b"br"));
             }
         }

@@ -1,5 +1,33 @@
-use crate::headers::default_headers;
-use crate::http::headers::{Line, CACHE_CONTROL, CONTENT_TYPE, SERVICE_WORKER_ALLOWED};
+use crate::handler::{HeaderSelector, HeadersAndCompression};
+use crate::http::headers::{
+    Line, ALLOW, CACHE_CONTROL, COEP, CONTENT_TYPE, COOP, CORP, CSP, HSTS, SERVICE_WORKER_ALLOWED,
+    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_XSS_PROTECTION,
+};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref DEFAULT_HEADERS: Vec<(&'static [u8], &'static [u8])> = {
+        let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
+            (ALLOW, b"GET, HEAD".as_slice()),
+            (X_CONTENT_TYPE_OPTIONS, b"nosniff".as_slice()),
+            (X_FRAME_OPTIONS, b"DENY".as_slice()),
+            (X_XSS_PROTECTION, b"1; mode=block".as_slice()),
+            (CORP, b"same-site".as_slice()),
+            (COEP, b"crendentialless".as_slice()),
+            (COOP, b"same-origin".as_slice()),
+            (CSP, b"default-src 'self';script-src 'wasm-unsafe-eval';script-src-elem 'self' 'unsafe-inline';script-src-attr 'none';worker-src 'self' blob:;style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;frame-src 'none';object-src 'none';base-uri 'none';frame-ancestors 'none';form-action 'none'".as_slice()),
+            (HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
+        ];
+        headers
+    };
+    static ref ERROR_HEADERS: Vec<(&'static [u8], &'static [u8])> = {
+        let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
+            (ALLOW, b"GET, HEAD".as_slice()),
+            //(HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
+        ];
+        headers
+    };
+}
 
 const CACHE_CONTROL_NO_CACHE: &[u8] =
     b"public,no-cache,max-age=0,must-revalidate;stale-if-error=3600";
@@ -7,56 +35,164 @@ const CACHE_CONTROL_REVALIDATE: &[u8] = b"public,max-age=3600,must-revalidate,st
 const CACHE_CONTROL_IMMUTABLE: &[u8] =
     b"public,max-age=86400,immutable,stale-while-revalidate=864000,stale-if-error=3600";
 
-pub(crate) fn headers_for_type(
-    filename: &str,
-    extension: &str,
-) -> Option<(Box<dyn Iterator<Item = Line>>, bool)> {
+pub(crate) fn default_headers() -> impl Iterator<Item = Line> {
+    DEFAULT_HEADERS.iter().map(|&it| it.into())
+}
+
+pub(crate) fn error_headers() -> impl Iterator<Item = Line> {
+    ERROR_HEADERS.iter().map(|&it| it.into())
+}
+
+pub(crate) fn headers_for_type(filename: &str, extension: &str) -> Option<HeadersAndCompression> {
     match extension {
-        "html" | "htm" => Some((headers(b"text/html", CACHE_CONTROL_REVALIDATE), true)),
-        "css" => Some((headers(b"text/css", CACHE_CONTROL_REVALIDATE), true)),
-        "js" | "mjs" | "map" => Some((
-            if filename.starts_with("service-worker.") || filename.starts_with("sw.") {
-                let headers = headers(b"application/javascript", CACHE_CONTROL_NO_CACHE);
-                Box::new(headers.chain(vec![Line::with_array_ref_value(
-                    SERVICE_WORKER_ALLOWED,
-                    b"/",
-                )]))
-            } else {
-                headers(b"application/javascript", CACHE_CONTROL_REVALIDATE)
-            },
+        "html" | "htm" => Some(headers_and_compression(
+            b"text/html",
+            CACHE_CONTROL_REVALIDATE,
             true,
         )),
-        "json" => Some((headers(b"application/json", CACHE_CONTROL_REVALIDATE), true)),
-        "txt" => Some((headers(b"text/plain", CACHE_CONTROL_REVALIDATE), true)),
-        "csv" => Some((headers(b"text/csv", CACHE_CONTROL_REVALIDATE), true)),
-        "md" => Some((headers(b"text/markdown", CACHE_CONTROL_REVALIDATE), true)),
-        "wasm" => Some((headers(b"application/wasm", CACHE_CONTROL_REVALIDATE), true)),
-        "woff2" => Some((headers(b"font/woff2", CACHE_CONTROL_REVALIDATE), false)),
-        "ico" => Some((headers(b"image/x-icon", CACHE_CONTROL_IMMUTABLE), true)),
-        "webp" => Some((headers(b"image/webp", CACHE_CONTROL_IMMUTABLE), false)),
-        "avif" => Some((headers(b"image/avif", CACHE_CONTROL_IMMUTABLE), false)),
-        "gif" => Some((headers(b"image/gif", CACHE_CONTROL_IMMUTABLE), false)),
-        "heif" => Some((headers(b"image/heif", CACHE_CONTROL_IMMUTABLE), false)),
-        "heic" => Some((headers(b"image/heic", CACHE_CONTROL_IMMUTABLE), false)),
-        "png" => Some((headers(b"image/png", CACHE_CONTROL_IMMUTABLE), false)),
-        "jpg" => Some((headers(b"image/jpeg", CACHE_CONTROL_IMMUTABLE), false)),
-        "mp3" => Some((headers(b"audio/mp3", CACHE_CONTROL_REVALIDATE), false)),
-        "mp4" => Some((headers(b"video/mp4", CACHE_CONTROL_REVALIDATE), false)),
-        "svg" => Some((headers(b"image/svg+xml", CACHE_CONTROL_IMMUTABLE), true)),
-        "pdf" => Some((headers(b"application/pdf", CACHE_CONTROL_REVALIDATE), true)),
-        "zip" => Some((headers(b"application/zip", CACHE_CONTROL_REVALIDATE), false)),
+        "css" => Some(headers_and_compression(
+            b"text/css",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "js" | "mjs" | "map" => Some(
+            if filename.starts_with("service-worker.") || filename.starts_with("sw.") {
+                let mut headers_and_compression = headers_and_compression(
+                    b"application/javascript",
+                    CACHE_CONTROL_NO_CACHE,
+                    true,
+                );
+                headers_and_compression
+                    .headers
+                    .push(Line::with_array_ref_value(SERVICE_WORKER_ALLOWED, b"/"));
+                headers_and_compression
+            } else {
+                headers_and_compression(b"application/javascript", CACHE_CONTROL_REVALIDATE, true)
+            },
+        ),
+        "json" => Some(headers_and_compression(
+            b"application/json",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "txt" => Some(headers_and_compression(
+            b"text/plain",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "csv" => Some(headers_and_compression(
+            b"text/csv",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "md" => Some(headers_and_compression(
+            b"text/markdown",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "wasm" => Some(headers_and_compression(
+            b"application/wasm",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "woff2" => Some(headers_and_compression(
+            b"font/woff2",
+            CACHE_CONTROL_REVALIDATE,
+            false,
+        )),
+        "ico" => Some(headers_and_compression(
+            b"image/x-icon",
+            CACHE_CONTROL_IMMUTABLE,
+            true,
+        )),
+        "webp" => Some(headers_and_compression(
+            b"image/webp",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "avif" => Some(headers_and_compression(
+            b"image/avif",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "gif" => Some(headers_and_compression(
+            b"image/gif",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "heif" => Some(headers_and_compression(
+            b"image/heif",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "heic" => Some(headers_and_compression(
+            b"image/heic",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "png" => Some(headers_and_compression(
+            b"image/png",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "jpg" => Some(headers_and_compression(
+            b"image/jpeg",
+            CACHE_CONTROL_IMMUTABLE,
+            false,
+        )),
+        "mp3" => Some(headers_and_compression(
+            b"audio/mp3",
+            CACHE_CONTROL_REVALIDATE,
+            false,
+        )),
+        "mp4" => Some(headers_and_compression(
+            b"video/mp4",
+            CACHE_CONTROL_REVALIDATE,
+            false,
+        )),
+        "svg" => Some(headers_and_compression(
+            b"image/svg+xml",
+            CACHE_CONTROL_IMMUTABLE,
+            true,
+        )),
+        "pdf" => Some(headers_and_compression(
+            b"application/pdf",
+            CACHE_CONTROL_REVALIDATE,
+            true,
+        )),
+        "zip" => Some(headers_and_compression(
+            b"application/zip",
+            CACHE_CONTROL_REVALIDATE,
+            false,
+        )),
         _ => None,
     }
 }
 
-fn headers(
+fn headers_and_compression(
     content_type: &'static [u8],
     cache_control: &'static [u8],
-) -> Box<dyn Iterator<Item = Line>> {
+    compressible: bool,
+) -> HeadersAndCompression {
     let default_headers = default_headers();
     let new_headers: Vec<Line> = vec![
         Line::with_slice_value(CONTENT_TYPE, content_type),
         Line::with_slice_value(CACHE_CONTROL, cache_control),
     ];
-    Box::new(default_headers.chain(new_headers))
+    HeadersAndCompression {
+        headers: default_headers.chain(new_headers).collect(),
+        compressible,
+    }
+}
+
+pub(crate) struct DefaultHeaderSelector;
+
+impl HeaderSelector for DefaultHeaderSelector {
+    fn headers_for_extension(
+        &self,
+        filename: &str,
+        extension: &str,
+    ) -> Option<HeadersAndCompression> {
+        headers_for_type(filename, extension)
+    }
 }

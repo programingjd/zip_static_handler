@@ -1,7 +1,13 @@
 use crate::errors::Result;
-use crate::handler::Handler;
+use crate::handler::{Handler, HeaderSelector};
+use crate::types::DefaultHeaderSelector;
 use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::io::Cursor;
 use std::marker::PhantomData;
+use tracing::trace;
+use zip_structs::zip_central_directory::ZipCDEntry;
+use zip_structs::zip_eocd::ZipEOCD;
 
 pub trait ZipPrefix {
     fn zip_prefix(self) -> Option<String>;
@@ -20,23 +26,34 @@ impl ZipPrefix for String {
     }
 }
 impl WithZipPrefix for String {}
-pub trait RootPrefix {
-    fn root_prefix(self) -> Option<String>;
+pub trait PathPrefix {
+    fn path_prefix(self) -> Option<String>;
 }
-pub trait WithoutRootPrefix: RootPrefix {}
-pub trait WithRootPrefix: RootPrefix {}
-impl RootPrefix for () {
-    fn root_prefix(self) -> Option<String> {
+pub trait WithoutPathPrefix: PathPrefix {}
+pub trait WithPathPrefix: PathPrefix {}
+impl PathPrefix for () {
+    fn path_prefix(self) -> Option<String> {
         None
     }
 }
-impl WithoutRootPrefix for () {}
-impl RootPrefix for String {
-    fn root_prefix(self) -> Option<String> {
+impl WithoutPathPrefix for () {}
+impl PathPrefix for String {
+    fn path_prefix(self) -> Option<String> {
         Some(self)
     }
 }
-impl WithRootPrefix for String {}
+impl WithPathPrefix for String {}
+pub trait CustomHeaderSelector<'a> {
+    fn header_selector(self) -> Option<&'a dyn HeaderSelector>;
+}
+pub trait WithCustomHeaderSelector<'a>: CustomHeaderSelector<'a> {}
+pub trait WithoutCustomHeaderSelector<'a>: CustomHeaderSelector<'a> {}
+impl<'a> CustomHeaderSelector<'a> for () {
+    fn header_selector(self) -> Option<&'a dyn HeaderSelector> {
+        None
+    }
+}
+impl<'a> WithoutCustomHeaderSelector<'a> for () {}
 pub trait Diff<'a> {
     fn diff(self) -> Option<&'a Handler>;
 }
@@ -61,81 +78,157 @@ impl Bytes for NoBytes {}
 impl WithoutBytes for NoBytes {}
 impl<T: Borrow<[u8]>> Bytes for T {}
 
-pub struct Builder<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: Bytes> {
+pub struct Builder<
+    'a,
+    Z: ZipPrefix,
+    R: PathPrefix,
+    H: CustomHeaderSelector<'a>,
+    D: Diff<'a>,
+    B: Bytes,
+> {
     _lifetime: PhantomData<&'a ()>,
     zip_prefix: Z,
-    root_prefix: R,
+    path_prefix: R,
+    header_selector: H,
     diff: D,
     bytes: B,
 }
 
 impl Handler {
-    pub fn builder() -> Builder<'static, (), (), (), NoBytes> {
+    pub fn builder() -> Builder<'static, (), (), (), (), NoBytes> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: (),
-            root_prefix: (),
+            path_prefix: (),
+            header_selector: (),
             diff: (),
             bytes: NoBytes,
         }
     }
 }
 
-impl<'a, Z: WithoutZipPrefix, R: RootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, String, R, D, B> {
+impl<
+        'a,
+        Z: WithoutZipPrefix,
+        R: PathPrefix,
+        H: CustomHeaderSelector<'a>,
+        D: Diff<'a>,
+        B: Bytes,
+    > Builder<'a, Z, R, H, D, B>
+{
+    pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, String, R, H, D, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: prefix.into(),
-            root_prefix: self.root_prefix,
+            path_prefix: self.path_prefix,
+            header_selector: self.header_selector,
             diff: self.diff,
             bytes: self.bytes,
         }
     }
 }
 
-impl<'a, Z: ZipPrefix, R: WithoutRootPrefix, D: Diff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_root_prefix(self, prefix: impl Into<String>) -> Builder<'a, Z, String, D, B> {
+impl<
+        'a,
+        Z: ZipPrefix,
+        R: WithoutPathPrefix,
+        H: CustomHeaderSelector<'a>,
+        D: Diff<'a>,
+        B: Bytes,
+    > Builder<'a, Z, R, H, D, B>
+{
+    pub fn with_root_prefix(self, prefix: impl Into<String>) -> Builder<'a, Z, String, H, D, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
-            root_prefix: prefix.into(),
+            path_prefix: prefix.into(),
+            header_selector: self.header_selector,
             diff: self.diff,
             bytes: self.bytes,
         }
     }
 }
 
-impl<'a, Z: ZipPrefix, R: RootPrefix, D: WithDiff<'a>, B: Bytes> Builder<'a, Z, R, D, B> {
-    pub fn with_diff(self, diff: &'a Handler) -> Builder<'a, Z, R, &'a Handler, B> {
+impl<'a, Z: ZipPrefix, R: PathPrefix, H: CustomHeaderSelector<'a>, D: WithDiff<'a>, B: Bytes>
+    Builder<'a, Z, R, H, D, B>
+{
+    pub fn with_diff(self, diff: &'a Handler) -> Builder<'a, Z, R, H, &'a Handler, B> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
-            root_prefix: self.root_prefix,
+            path_prefix: self.path_prefix,
+            header_selector: self.header_selector,
             diff,
             bytes: self.bytes,
         }
     }
 }
 
-impl<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: WithoutBytes> Builder<'a, Z, R, D, B> {
-    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, Z, R, D, T> {
+impl<
+        'a,
+        Z: ZipPrefix,
+        R: PathPrefix,
+        H: CustomHeaderSelector<'a>,
+        D: Diff<'a>,
+        B: WithoutBytes,
+    > Builder<'a, Z, R, H, D, B>
+{
+    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, Z, R, H, D, T> {
         Builder {
             _lifetime: PhantomData,
             zip_prefix: self.zip_prefix,
-            root_prefix: self.root_prefix,
+            path_prefix: self.path_prefix,
+            header_selector: self.header_selector,
             diff: self.diff,
             bytes,
         }
     }
 }
 
-impl<'a, Z: ZipPrefix, R: RootPrefix, D: Diff<'a>, B: Borrow<[u8]>> Builder<'a, Z, R, D, B> {
+impl<
+        'a,
+        Z: ZipPrefix,
+        R: PathPrefix,
+        H: CustomHeaderSelector<'a>,
+        D: Diff<'a>,
+        B: Borrow<[u8]>,
+    > Builder<'a, Z, R, H, D, B>
+{
     pub fn try_build(self) -> Result<Handler> {
-        Handler::try_new(
-            self.bytes,
-            self.root_prefix.root_prefix().unwrap_or_default(),
-            self.zip_prefix.zip_prefix().unwrap_or_default(),
-            self.diff.diff(),
-        )
+        let bytes = self.bytes;
+        let path_prefix = self.path_prefix.path_prefix().unwrap_or_default();
+        let zip_prefix = self.zip_prefix.zip_prefix().unwrap_or_default();
+        let diff = self.diff.diff();
+        let header_selector = self
+            .header_selector
+            .header_selector()
+            .unwrap_or_else(|| &DefaultHeaderSelector);
+        trace!(path_prefix = path_prefix, zip_prefix = zip_prefix);
+        let mut cursor = Cursor::new(bytes.borrow());
+        let directory = ZipEOCD::from_reader(&mut cursor)?;
+        let mut routes = HashMap::new();
+        let entries = ZipCDEntry::all_from_eocd(&mut cursor, &directory)?;
+        for entry in &entries {
+            if let Some((path, value)) = crate::handler::build_entry(
+                &mut cursor,
+                zip_prefix.as_str(),
+                entry,
+                &entries,
+                header_selector,
+                diff,
+            )? {
+                if path.ends_with('/') && path.len() > 1 {
+                    let no_trailing_slash = &path[..path.len() - 1];
+                    routes.insert(
+                        format!("{path_prefix}{path}"),
+                        crate::handler::redirect_entry(no_trailing_slash),
+                    );
+                    routes.insert(format!("{path_prefix}{no_trailing_slash}"), value);
+                } else {
+                    routes.insert(path, value);
+                }
+            }
+        }
+        Ok(Handler { files: routes })
     }
 }
