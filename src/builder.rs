@@ -80,13 +80,15 @@ impl<T: Borrow<[u8]>> Bytes for T {}
 
 pub struct Builder<
     'a,
+    'b,
     Z: ZipPrefix,
     R: PathPrefix,
     H: CustomHeaderSelector<'a>,
-    D: Diff<'a>,
+    D: Diff<'b>,
     B: Bytes,
 > {
-    _lifetime: PhantomData<&'a ()>,
+    _a: PhantomData<&'a ()>,
+    _b: PhantomData<&'b ()>,
     zip_prefix: Z,
     path_prefix: R,
     header_selector: H,
@@ -95,9 +97,10 @@ pub struct Builder<
 }
 
 impl Handler {
-    pub fn builder() -> Builder<'static, (), (), (), (), NoBytes> {
+    pub fn builder() -> Builder<'static, 'static, (), (), (), (), NoBytes> {
         Builder {
-            _lifetime: PhantomData,
+            _a: PhantomData,
+            _b: PhantomData,
             zip_prefix: (),
             path_prefix: (),
             header_selector: (),
@@ -109,16 +112,18 @@ impl Handler {
 
 impl<
         'a,
+        'b,
         Z: WithoutZipPrefix,
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
-        D: Diff<'a>,
+        D: Diff<'b>,
         B: Bytes,
-    > Builder<'a, Z, R, H, D, B>
+    > Builder<'a, 'b, Z, R, H, D, B>
 {
-    pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, String, R, H, D, B> {
+    pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, 'b, String, R, H, D, B> {
         Builder {
-            _lifetime: PhantomData,
+            _a: PhantomData,
+            _b: PhantomData,
             zip_prefix: prefix.into(),
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
@@ -130,16 +135,21 @@ impl<
 
 impl<
         'a,
+        'b,
         Z: ZipPrefix,
         R: WithoutPathPrefix,
         H: CustomHeaderSelector<'a>,
-        D: Diff<'a>,
+        D: Diff<'b>,
         B: Bytes,
-    > Builder<'a, Z, R, H, D, B>
+    > Builder<'a, 'b, Z, R, H, D, B>
 {
-    pub fn with_root_prefix(self, prefix: impl Into<String>) -> Builder<'a, Z, String, H, D, B> {
+    pub fn with_root_prefix(
+        self,
+        prefix: impl Into<String>,
+    ) -> Builder<'a, 'b, Z, String, H, D, B> {
         Builder {
-            _lifetime: PhantomData,
+            _a: PhantomData,
+            _b: PhantomData,
             zip_prefix: self.zip_prefix,
             path_prefix: prefix.into(),
             header_selector: self.header_selector,
@@ -149,12 +159,20 @@ impl<
     }
 }
 
-impl<'a, Z: ZipPrefix, R: PathPrefix, H: CustomHeaderSelector<'a>, D: WithDiff<'a>, B: Bytes>
-    Builder<'a, Z, R, H, D, B>
+impl<
+        'a,
+        'b,
+        Z: ZipPrefix,
+        R: PathPrefix,
+        H: CustomHeaderSelector<'a>,
+        D: WithDiff<'b>,
+        B: Bytes,
+    > Builder<'a, 'b, Z, R, H, D, B>
 {
-    pub fn with_diff(self, diff: &'a Handler) -> Builder<'a, Z, R, H, &'a Handler, B> {
+    pub fn with_diff(self, diff: &'b Handler) -> Builder<'a, 'b, Z, R, H, &'b Handler, B> {
         Builder {
-            _lifetime: PhantomData,
+            _a: PhantomData,
+            _b: PhantomData,
             zip_prefix: self.zip_prefix,
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
@@ -166,16 +184,18 @@ impl<'a, Z: ZipPrefix, R: PathPrefix, H: CustomHeaderSelector<'a>, D: WithDiff<'
 
 impl<
         'a,
+        'b,
         Z: ZipPrefix,
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
-        D: Diff<'a>,
+        D: Diff<'b>,
         B: WithoutBytes,
-    > Builder<'a, Z, R, H, D, B>
+    > Builder<'a, 'b, Z, R, H, D, B>
 {
-    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, Z, R, H, D, T> {
+    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, 'b, Z, R, H, D, T> {
         Builder {
-            _lifetime: PhantomData,
+            _a: PhantomData,
+            _b: PhantomData,
             zip_prefix: self.zip_prefix,
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
@@ -187,12 +207,13 @@ impl<
 
 impl<
         'a,
+        'b,
         Z: ZipPrefix,
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
-        D: Diff<'a>,
+        D: Diff<'b>,
         B: Borrow<[u8]>,
-    > Builder<'a, Z, R, H, D, B>
+    > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn try_build(self) -> Result<Handler> {
         let bytes = self.bytes;
