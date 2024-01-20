@@ -44,21 +44,22 @@ impl PathPrefix for String {
 }
 impl WithPathPrefix for String {}
 pub trait CustomHeaderSelector<'a> {
-    fn header_selector(self) -> Option<Box<dyn HeaderSelector>>;
+    fn header_selector(self) -> Option<&'a dyn HeaderSelector>;
 }
 pub trait WithCustomHeaderSelector<'a>: CustomHeaderSelector<'a> {}
 pub trait WithoutCustomHeaderSelector<'a>: CustomHeaderSelector<'a> {}
 impl<'a> CustomHeaderSelector<'a> for () {
-    fn header_selector(self) -> Option<Box<dyn HeaderSelector>> {
+    fn header_selector(self) -> Option<&'a dyn HeaderSelector> {
         None
     }
 }
 impl<'a> WithoutCustomHeaderSelector<'a> for () {}
-// impl<'a, T: HeaderSelector + 'a> CustomHeaderSelector<'a> for T {
-//     fn header_selector(self) -> Option<Box<dyn HeaderSelector>> {
-//         Some(Box::new(self))
-//     }
-// }
+impl<'a, T: HeaderSelector> WithCustomHeaderSelector<'a> for &'a T {}
+impl<'a, T: HeaderSelector> CustomHeaderSelector<'a> for &'a T {
+    fn header_selector(self) -> Option<&'a dyn HeaderSelector> {
+        Some(self)
+    }
+}
 pub trait Diff<'a> {
     fn diff(self) -> Option<&'a Handler>;
 }
@@ -164,31 +165,31 @@ impl<
     }
 }
 
-// impl<
-//         'a,
-//         'b,
-//         Z: ZipPrefix,
-//         R: PathPrefix,
-//         H: WithoutCustomHeaderSelector<'a>,
-//         D: Diff<'b>,
-//         B: Bytes,
-//     > Builder<'a, 'b, Z, R, H, D, B>
-// {
-//     pub fn with_custom_header_selector<S: HeaderSelector + 'a>(
-//         self,
-//         header_selector: S,
-//     ) -> Builder<'a, 'b, Z, R, S, D, B> {
-//         Builder {
-//             _a: PhantomData,
-//             _b: PhantomData,
-//             zip_prefix: self.zip_prefix,
-//             path_prefix: self.path_prefix,
-//             header_selector,
-//             diff: self.diff,
-//             bytes: self.bytes,
-//         }
-//     }
-// }
+impl<
+        'a,
+        'b,
+        Z: ZipPrefix,
+        R: PathPrefix,
+        H: WithoutCustomHeaderSelector<'a>,
+        D: Diff<'b>,
+        B: Bytes,
+    > Builder<'a, 'b, Z, R, H, D, B>
+{
+    pub fn with_custom_header_selector<S: WithCustomHeaderSelector<'a>>(
+        self,
+        header_selector: S,
+    ) -> Builder<'a, 'b, Z, R, S, D, B> {
+        Builder {
+            _a: PhantomData,
+            _b: PhantomData,
+            zip_prefix: self.zip_prefix,
+            path_prefix: self.path_prefix,
+            header_selector,
+            diff: self.diff,
+            bytes: self.bytes,
+        }
+    }
+}
 
 impl<
         'a,
@@ -254,7 +255,7 @@ impl<
         let header_selector = self
             .header_selector
             .header_selector()
-            .unwrap_or_else(|| Box::new(DefaultHeaderSelector));
+            .unwrap_or(&DefaultHeaderSelector);
         trace!(path_prefix = path_prefix, zip_prefix = zip_prefix);
         let mut cursor = Cursor::new(bytes.borrow());
         let directory = ZipEOCD::from_reader(&mut cursor)?;
@@ -266,7 +267,7 @@ impl<
                 zip_prefix.as_str(),
                 entry,
                 &entries,
-                header_selector.as_ref(),
+                header_selector,
                 diff,
             )? {
                 if path.ends_with('/') && path.len() > 1 {
