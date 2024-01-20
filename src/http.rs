@@ -55,7 +55,7 @@ pub mod headers {
     }
 
     impl Line {
-        pub(crate) fn with_array_ref_value<const N: usize>(
+        pub fn with_array_ref_value<const N: usize>(
             key: &'static [u8],
             value: &'static [u8; N],
         ) -> Self {
@@ -64,13 +64,13 @@ pub mod headers {
                 value: OwnedOrStatic::Static(value.as_slice()),
             }
         }
-        pub(crate) fn with_slice_value(key: &'static [u8], value: &'static [u8]) -> Self {
+        pub fn with_slice_value(key: &'static [u8], value: &'static [u8]) -> Self {
             Self {
                 key,
                 value: OwnedOrStatic::Static(value),
             }
         }
-        pub(crate) fn with_owned_value(key: &'static [u8], value: Vec<u8>) -> Self {
+        pub fn with_owned_value(key: &'static [u8], value: Vec<u8>) -> Self {
             Self {
                 key,
                 value: OwnedOrStatic::Owned(value),

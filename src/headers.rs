@@ -35,3 +35,19 @@ pub(crate) fn default_headers() -> impl Iterator<Item = Line> {
 pub(crate) fn error_headers() -> impl Iterator<Item = Line> {
     crate::headers::ERROR_HEADERS.iter().map(|&it| it.into())
 }
+
+// struct DefaultDefaultHeaders;
+// impl DefaultHeaders for DefaultDefaultHeaders {
+//     fn default_headers() -> impl Iterator<Item=Line> {
+//         DEFAULT_HEADERS.iter().map(|&it| it.into())
+//     }
+//
+//     fn error_headers() -> impl Iterator<Item=Line> {
+//         ERROR_HEADERS.iter().map(|&it| it.into())
+//     }
+// }
+//
+// pub trait DefaultHeaders {
+//     fn default_headers() -> impl Iterator<Item = Line>;
+//     fn error_headers() -> impl Iterator<Item = Line>;
+// }

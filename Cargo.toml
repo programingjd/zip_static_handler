@@ -31,6 +31,22 @@ version = "0.1"
 default-features = false
 features = ["std", "attributes"]
 
+[dependencies.hyper]
+optional = true
+version = "1.1"
+default-features = false
+features = []
+
+[dependencies.http-body-util]
+optional = true
+version = "0.1"
+default-features = false
+features = []
+
+[features]
+default = []
+hyper = ["dep:hyper","dep:http-body-util"]
+
 [dev-dependencies.reqwest]
 version = "0.11"
 features = ["blocking", "rustls-tls"]
@@ -48,18 +64,15 @@ members = ["test-tracing"]
 
 [[example]]
 name = "hyper"
-[dependencies.http-body-util]
-version = "0.1"
-default-features = false
-features = []
-[dependencies.hyper]
-version = "1.1"
-default-features = false
-features = ["full"]
+required-features = ["hyper"]
+#[dependencies.hyper]
+#version = "1.1"
+#default-features = false
+#features = ["full"]
 [dependencies.hyper-util]
 version = "0.1"
 default-features = false
-features = ["tokio"]
+features = ["tokio", "server", "http1"]
 [dependencies.tokio]
 version = "1.35"
 default-features = false
