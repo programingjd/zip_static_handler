@@ -1,6 +1,6 @@
 # zip_static_handler
 
-Http handler implementation for serving static content from a zip archive. 
+HTTP handler implementation for serving static content from a zip archive. 
 
 ## Handler conventions
 
@@ -33,3 +33,59 @@ The uncompressed file should also be present in the archive. It is used to compu
 Pre-compressed files are not checked. They are not decompressed to make sure that they match the content of the uncompressed file.
 
 If a pre-compressed file is missing for a compressible content-type, the compressed version is computed during the creation of the Handler instance. This means that you do not have to include pre-compressed files in the zip archive, but the consequence is a substantial increase in time and cpu usage at the creation of the Handler instance.
+
+## Usage
+
+The only argument that the builder requires is the zip archive content as bytes.
+```rust
+let zip_bytes: &[u8] = download_zip();
+let handler = Handler::builder()
+    .with_zip(zip_bytes)
+    .try_build()?;
+```
+
+There are helper functions to download a zip archive from a github repository (by branch, tag or commit hash).
+
+You can specify a prefix both for the path and for the zip content. If the zip is the export of a github repository for instance, you probably want to get rid of the `repositiory-${branch_or_tag_or_commit_hash}/` prefix.
+
+```rust
+let zip_bytes = download(&zip_download_branch_url(
+     "programingjd",
+     "about.programingjd.me",
+     "main",
+))
+.await?;
+let handler = Handler::builder()
+     .with_zip_prefix("about.programingjd.me-main/")
+     .wit_path_prefix("about")
+     .with_zip(zip_bytes)
+     .try_build()?;
+```
+
+If you are creating a new handler after each repository update, you can provide the previous handler for diffing.
+<br>This is particularly useful when the content is not pre-compressed and you let the handler take care of the compression.
+All the unchanged files that need to be compressed will be copied from the old handler rather than compressed again.
+
+```rust
+let handler = Handler::builder()
+     .with_zip_prefix("about.programingjd.me-main/")
+     .with_zip(zip_bytes)
+     .with_diff(&previous_handler)
+     .try_build()?;
+```
+
+## Features
+
+You can choose the implementation of HTTP request and response that you need by enabling the appropriate feature: 
+
+- hyper
+
+  example: [hyper.rs](./examples/hyper.rs)
+
+
+## Examples
+
+There are examples for the different http implementations that can be enabled
+with the matching feature.
+
+The [hyper.rs](./examples/hyper.rs) also shows how to customize which file types are accepted and which headers are set on the responses. 
