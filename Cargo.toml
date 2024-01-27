@@ -43,9 +43,16 @@ version = "0.1"
 default-features = false
 features = []
 
+[dependencies.axum-core]
+optional = true
+version = "0.4"
+default-features = false
+features = []
+
 [features]
 default = []
 hyper = ["dep:hyper","dep:http-body-util"]
+axum = ["dep:axum-core"]
 
 [dev-dependencies.reqwest]
 version = "0.11"
@@ -77,3 +84,11 @@ features = ["tokio", "server", "http1"]
 version = "1.35"
 default-features = false
 features = ["full"]
+
+[[example]]
+name = "axum"
+required-features = ["axum"]
+[dependencies.axum]
+version = "0.7"
+default-features = false
+features = ["tokio", "http1"]

@@ -83,6 +83,11 @@ You can choose the implementation of HTTP request and response that you need by 
   example: [hyper.rs](./examples/hyper.rs)
 
 
+- axum
+
+  example: [axum.rs](./examples/axum.rs)
+
+
 ## Examples
 
 There are examples for the different http implementations that can be enabled

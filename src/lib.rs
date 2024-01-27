@@ -10,5 +10,8 @@ mod types;
 #[cfg(feature = "hyper")]
 pub mod hyper;
 
+#[cfg(feature = "axum")]
+pub mod axum;
+
 #[cfg(test)]
 pub(crate) static INIT: std::sync::Once = std::sync::Once::new();
