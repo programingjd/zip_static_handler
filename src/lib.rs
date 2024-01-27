@@ -13,5 +13,8 @@ pub mod hyper;
 #[cfg(feature = "axum")]
 pub mod axum;
 
+#[cfg(feature = "actix")]
+pub mod actix;
+
 #[cfg(test)]
 pub(crate) static INIT: std::sync::Once = std::sync::Once::new();

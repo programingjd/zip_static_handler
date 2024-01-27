@@ -49,14 +49,26 @@ version = "0.4"
 default-features = false
 features = []
 
+[dependencies.actix-web]
+optional = true
+version = "4.4"
+default-features = false
+features = []
+
 [features]
 default = []
 hyper = ["dep:hyper","dep:http-body-util"]
 axum = ["dep:axum-core"]
+actix = ["dep:actix-web"]
 
 [dev-dependencies.reqwest]
 version = "0.11"
 features = ["blocking", "rustls-tls"]
+
+[dev-dependencies.actix-web]
+version = "4.4"
+default-features = false
+features = ["macros"]
 
 [dev-dependencies.tracing-subscriber]
 version = "0.3"
@@ -91,4 +103,9 @@ required-features = ["axum"]
 [dependencies.axum]
 version = "0.7"
 default-features = false
-features = ["tokio", "http1"]
+features = ["tokio", "http1", "tracing"]
+
+[[example]]
+name = "actix"
+required-features = ["actix"]
+

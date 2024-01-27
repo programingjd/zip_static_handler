@@ -1,5 +1,6 @@
 use axum::extract::{Request, State};
 use axum::response::Response;
+use axum::routing::get;
 use axum::Router;
 use reqwest::Client;
 use std::sync::Arc;
@@ -9,6 +10,15 @@ use zip_static_handler::handler::Handler;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    tracing_subscriber::fmt()
+        .compact()
+        //.with_max_level(tracing_subscriber::filter::LevelFilter::TRACE)
+        .with_env_filter("zip_static_handler=info,axum::rejection=trace")
+        .without_time()
+        .with_line_number(false)
+        .with_file(false)
+        .try_init()
+        .expect("could not init tracing subscriber");
     let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let zip = download(&zip_download_branch_url(
         "programingjd",
@@ -28,10 +38,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 }
 
 fn app() -> Router<Arc<Handler>> {
-    Router::new().fallback(handler)
+    Router::new()
+        .route("/version", get(version_handler))
+        .fallback(static_handler)
 }
 
-async fn handler(State(state): State<Arc<Handler>>, request: Request) -> Response {
+async fn version_handler() -> &'static str {
+    "1.0"
+}
+
+async fn static_handler(State(state): State<Arc<Handler>>, request: Request) -> Response {
     state.handle_request(request).unwrap()
 }
 

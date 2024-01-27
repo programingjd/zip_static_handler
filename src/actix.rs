@@ -3,31 +3,24 @@ use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
-use http_body_util::combinators::BoxBody;
-use http_body_util::{BodyExt, Empty, Full};
-use hyper::body::Bytes;
-use hyper::http;
-use hyper::http::{HeaderName, HeaderValue};
+use actix_web::body::BoxBody;
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use std::fmt::{Display, Formatter};
+use std::io::ErrorKind;
 use std::str::from_utf8;
-
-type HyperResponse = hyper::Response<BoxBody<Bytes, hyper::Error>>;
-type HyperRequest = hyper::Request<hyper::body::Incoming>;
 
 impl Handler {
     pub fn handle_request(
         &self,
-        request: HyperRequest,
-    ) -> std::result::Result<HyperResponse, Error> {
+        request: HttpRequest,
+    ) -> std::result::Result<HttpResponse<BoxBody>, Error> {
         self.handle(RequestAdapter { inner: request })
     }
 }
 
-impl Error {
-    pub fn boxed(self) -> Box<impl std::error::Error + Send + Sync> {
-        Box::new(ErrorAdapter {
-            message: self.to_string(),
-        })
+impl From<Error> for std::io::Error {
+    fn from(value: Error) -> Self {
+        std::io::Error::new(ErrorKind::Other, value.to_string())
     }
 }
 
@@ -45,14 +38,14 @@ impl Display for ErrorAdapter {
 impl std::error::Error for ErrorAdapter {}
 
 struct RequestAdapter {
-    inner: HyperRequest,
+    inner: HttpRequest,
 }
 
 struct ResponseBuilderAdapter {
-    inner: http::response::Builder,
+    inner: HttpResponseBuilder,
 }
 
-impl Request<HyperResponse, ResponseBuilderAdapter> for RequestAdapter {
+impl Request<HttpResponse<BoxBody>, ResponseBuilderAdapter> for RequestAdapter {
     fn method(&self) -> &[u8] {
         self.inner.method().as_str().as_bytes()
     }
@@ -70,43 +63,32 @@ impl Request<HyperResponse, ResponseBuilderAdapter> for RequestAdapter {
     fn response_builder_with_status(code: StatusCode) -> ResponseBuilderAdapter {
         let code: u16 = code.into();
         ResponseBuilderAdapter {
-            inner: hyper::Response::builder().status(code),
+            inner: HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap()),
         }
     }
 }
 
 impl ResponseBuilderAdapter {
-    fn full(slice: &[u8]) -> BoxBody<Bytes, hyper::Error> {
-        Full::new(Bytes::copy_from_slice(slice))
-            .map_err(|never| match never {})
-            .boxed()
+    fn full(slice: &[u8]) -> BoxBody {
+        BoxBody::new(slice.to_vec())
     }
-    fn empty() -> BoxBody<Bytes, hyper::Error> {
-        Empty::<Bytes>::new()
-            .map_err(|never| match never {})
-            .boxed()
+    fn empty() -> BoxBody {
+        BoxBody::new(())
     }
 }
 
-impl Builder<HyperResponse> for ResponseBuilderAdapter {
+impl Builder<HttpResponse<BoxBody>> for ResponseBuilderAdapter {
     fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self {
         let mut inner = self.inner;
-        let map = inner.headers_mut().unwrap();
         headers.for_each(|ref line| {
             let line = line.as_ref();
-            if let Ok(name) = HeaderName::from_bytes(line.key) {
-                if let Ok(value) = HeaderValue::from_bytes(line.value.as_ref()) {
-                    map.append(name, value);
-                }
-            }
+            inner.append_header((line.key, line.value.as_ref()));
         });
         Self { inner }
     }
 
-    fn with_body(self, body: Option<&[u8]>) -> Result<HyperResponse> {
+    fn with_body(mut self, body: Option<&[u8]>) -> Result<HttpResponse<BoxBody>> {
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        self.inner
-            .body(body)
-            .map_err(|err| Error::Wrapped(Box::new(err)))
+        Ok(self.inner.body(body))
     }
 }

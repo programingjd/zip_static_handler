@@ -11,7 +11,7 @@ use crate::types::error_headers;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Cursor;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 use zip_structs::zip_central_directory::ZipCDEntry;
 use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
@@ -170,7 +170,7 @@ pub(crate) fn build_entry(
     }) = header_selector.headers_for_extension(filename, extension)
     {
         let path = path(zip_prefix, &name);
-        debug!(path = path);
+        info!(path = path);
         let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
         let crc32 = zip_file_header.crc32;
         let etag = format!("{:x}", crc32);
