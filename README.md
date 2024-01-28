@@ -101,3 +101,5 @@ with the matching feature.
 The [hyper.rs](./examples/hyper.rs) example shows how to customize which file types are accepted and which headers are set on the responses. 
 
 The [axum.rs](./examples/axum.rs) example shows how to add [tracing](https://github.com/tokio-rs/tracing).
+
+The [auto_update.rs](./examples/auto_update.rs) example shows how to add a webhook that updates the handler by downloading a new version of the zip archive and rebuilding the handler from that new zip archive.
