@@ -12,7 +12,6 @@ use zip_static_handler::handler::Handler;
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     tracing_subscriber::fmt()
         .compact()
-        //.with_max_level(tracing_subscriber::filter::LevelFilter::TRACE)
         .with_env_filter("zip_static_handler=info,axum::rejection=trace")
         .without_time()
         .with_line_number(false)

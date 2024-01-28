@@ -3,14 +3,14 @@ use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
-use axum::http::{HeaderMap, HeaderName, HeaderValue};
 use axum_core::response::IntoResponse;
+use http::{HeaderMap, HeaderName, HeaderValue};
 use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
 
-type AxumStatusCode = axum::http::StatusCode;
-type AxumResponse = axum::response::Response;
-type AxumRequest = axum::extract::Request;
+type HttpStatusCode = http::StatusCode;
+type AxumResponse = axum_core::response::Response;
+type AxumRequest = axum_core::extract::Request;
 
 impl Handler {
     pub fn handle_request(&self, request: AxumRequest) -> std::result::Result<AxumResponse, Error> {
@@ -44,7 +44,7 @@ struct RequestAdapter {
 }
 
 struct AxumResponseBuilder {
-    status_code: AxumStatusCode,
+    status_code: HttpStatusCode,
     headers: HeaderMap,
 }
 
@@ -64,7 +64,7 @@ impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
     }
 
     fn response_builder_with_status(code: StatusCode) -> AxumResponseBuilder {
-        let status_code: AxumStatusCode = AxumStatusCode::from_u16(code.into()).unwrap();
+        let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let headers = HeaderMap::new();
         AxumResponseBuilder {
             status_code,

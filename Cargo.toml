@@ -43,6 +43,12 @@ version = "0.1"
 default-features = false
 features = []
 
+[dependencies.http]
+optional = true
+version = "1.0"
+default-features = false
+features = ["std"]
+
 [dependencies.axum-core]
 optional = true
 version = "0.4"
@@ -58,18 +64,38 @@ features = []
 [features]
 default = []
 hyper = ["dep:hyper","dep:http-body-util"]
-axum = ["dep:axum-core"]
+axum = ["dep:axum-core","dep:http"]
 actix = ["dep:actix-web"]
 
+#http client for downloading zip from github
 [dev-dependencies.reqwest]
 version = "0.11"
 features = ["blocking", "rustls-tls"]
 
+[dev-dependencies.tokio]
+version = "1.35"
+default-features = false
+features = ["full"]
+
+# for the hyper example
+[dev-dependencies.hyper-util]
+version = "0.1"
+default-features = false
+features = ["tokio", "server", "http1"]
+
+# for the axum example
+[dev-dependencies.axum]
+version = "0.7"
+default-features = false
+features = ["tokio", "http1", "tracing"]
+
+# for the actix example
 [dev-dependencies.actix-web]
 version = "4.4"
 default-features = false
 features = ["macros"]
 
+# for the tests
 [dev-dependencies.tracing-subscriber]
 version = "0.3"
 default-features = true
@@ -84,28 +110,16 @@ members = ["test-tracing"]
 [[example]]
 name = "hyper"
 required-features = ["hyper"]
-#[dependencies.hyper]
-#version = "1.1"
-#default-features = false
-#features = ["full"]
-[dependencies.hyper-util]
-version = "0.1"
-default-features = false
-features = ["tokio", "server", "http1"]
-[dependencies.tokio]
-version = "1.35"
-default-features = false
-features = ["full"]
 
 [[example]]
 name = "axum"
 required-features = ["axum"]
-[dependencies.axum]
-version = "0.7"
-default-features = false
-features = ["tokio", "http1", "tracing"]
 
 [[example]]
 name = "actix"
 required-features = ["actix"]
+
+[[example]]
+name = "auto_update"
+required-features = ["axum"]
 
