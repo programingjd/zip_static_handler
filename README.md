@@ -1,3 +1,4 @@
+# zip_static_handler &emsp; [![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![crates.io Version](https://img.shields.io/crates/v/zip_static_handler.svg)](https://crates.io/crates/zip_static_handler) [![Documentation](https://docs.rs/zip_static_handler/badge.svg)](https://docs.rs/zip_static_handler) [Rust 1.75]
 # zip_static_handler
 
 HTTP handler implementation for serving static content from a zip archive. 
@@ -91,6 +92,11 @@ You can choose the implementation of HTTP request and response that you need by 
 - actix
 
   example: [actix.rs](./examples/actix.rs)
+
+
+- rocket
+
+  example: [rocket.rs](examples/rocket.rs)
 
 
 ## Examples

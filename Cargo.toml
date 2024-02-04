@@ -3,8 +3,15 @@ name = "zip_static_handler"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.75"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Jerome David <programingjd@gmail.com>"]
+categories = ["web-programming::http-server"]
+description = "Static file handler from zip archive"
+keywords = ["static", "handler", "zip"]
+license = "MIT"
+repository = "https://github.com/programingjd/zip_static_handler"
+include = [
+    "Cargo.toml", "src", "examples", "LICENSE", "README.md"
+]
 
 [dependencies.zip_structs]
 version = "0.2"
@@ -61,11 +68,18 @@ version = "4.4"
 default-features = false
 features = []
 
+[dependencies.rocket]
+optional = true
+version = "0.5"
+default-features = false
+features = []
+
 [features]
 default = []
 hyper = ["dep:hyper","dep:http-body-util"]
 axum = ["dep:axum-core","dep:http"]
 actix = ["dep:actix-web"]
+rocket = ["dep:rocket"]
 
 #http client for downloading zip from github
 [dev-dependencies.reqwest]
@@ -95,6 +109,11 @@ version = "4.4"
 default-features = false
 features = ["macros"]
 
+[dev-dependencies.rocket]
+version = "0.5"
+default-features = false
+features = []
+
 # for the tests
 [dev-dependencies.tracing-subscriber]
 version = "0.3"
@@ -118,6 +137,10 @@ required-features = ["axum"]
 [[example]]
 name = "actix"
 required-features = ["actix"]
+
+[[example]]
+name = "rocket"
+required-features = ["rocket"]
 
 [[example]]
 name = "auto_update"
