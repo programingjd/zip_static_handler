@@ -78,40 +78,6 @@ impl Handler {
     }
 }
 
-// impl Handler {
-//     pub(crate) fn try_new(
-//         zip: impl Borrow<[u8]>,
-//         root_prefix: impl AsRef<str>,
-//         zip_prefix: impl AsRef<str>,
-//         previous: Option<&Handler>,
-//     ) -> Result<Handler> {
-//         let route_prefix = root_prefix.as_ref();
-//         let zip_prefix = zip_prefix.as_ref();
-//         trace!(route_prefix = route_prefix, zip_prefix = zip_prefix);
-//         let mut cursor = Cursor::new(zip.borrow());
-//         let directory = ZipEOCD::from_reader(&mut cursor)?;
-//         let mut routes = HashMap::new();
-//         let entries = ZipCDEntry::all_from_eocd(&mut cursor, &directory)?;
-//         for entry in &entries {
-//             if let Some((path, value)) =
-//                 build_entry(&mut cursor, zip_prefix, entry, &entries, previous)?
-//             {
-//                 if path.ends_with('/') && path.len() > 1 {
-//                     let no_trailing_slash = &path[..path.len() - 1];
-//                     routes.insert(
-//                         format!("{route_prefix}{path}"),
-//                         redirect_entry(no_trailing_slash),
-//                     );
-//                     routes.insert(format!("{route_prefix}{no_trailing_slash}"), value);
-//                 } else {
-//                     routes.insert(path, value);
-//                 }
-//             }
-//         }
-//         Ok(Handler { files: routes })
-//     }
-// }
-
 pub(crate) struct Entry {
     headers: Vec<Line>,
     content: Option<Vec<u8>>,
