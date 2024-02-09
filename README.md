@@ -57,7 +57,7 @@ let zip_bytes = download(&zip_download_branch_url(
 .await?;
 let handler = Handler::builder()
      .with_zip_prefix("about.programingjd.me-main/")
-     .wit_path_prefix("about")
+     .with_path_prefix("about")
      .with_zip(zip_bytes)
      .try_build()?;
 ```
