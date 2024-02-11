@@ -12,7 +12,7 @@ use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::Handler;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .compact()
         .with_env_filter("auto_update=info,zip_static_handler=info,axum::rejection=trace")
@@ -32,8 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Handler::builder()
             .with_zip_prefix("about.programingjd.me-main/")
             .with_zip(zip)
-            .try_build()
-            .map_err(|err| err.boxed())?,
+            .try_build()?,
     ));
     axum::serve(
         listener,
@@ -108,7 +107,7 @@ async fn static_handler(State(state): State<Arc<RwLock<Handler>>>, request: Requ
     }
 }
 
-async fn download(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {
     let response = Client::default().get(url).send().await?;
     if !response.status().is_success() {
         panic!("failed to download {url} ({})", response.status().as_str());

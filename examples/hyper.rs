@@ -1,3 +1,6 @@
+use http_body_util::combinators::BoxBody;
+use http_body_util::{BodyExt, Empty};
+use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
@@ -9,7 +12,7 @@ use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::{Handler, HeaderSelector, HeadersAndCompression};
 use zip_static_handler::http::headers::{Line, ALLOW, CACHE_CONTROL, CONTENT_TYPE};
 
-async fn download(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {
     let response = Client::default().get(url).send().await?;
     if !response.status().is_success() {
         panic!("failed to download {url} ({})", response.status().as_str());
@@ -72,7 +75,7 @@ fn headers_and_compression(
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let zip = download(&zip_download_branch_url(
         "programingjd",
@@ -85,8 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .with_zip_prefix("about.programingjd.me-main/")
             .with_custom_header_selector(&HSelector)
             .with_zip(zip)
-            .try_build()
-            .map_err(|err| err.boxed())?,
+            .try_build()?,
     );
     loop {
         let (stream, _remote_address) = listener.accept().await?;
@@ -98,10 +100,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                     io,
                     service_fn(move |request| {
                         let handler = handler.clone();
-                        async move { handler.handle_request(request).map_err(|err| err.boxed()) }
+                        async move {
+                            match handler.handle_request(request) {
+                                Ok(response) => Ok(response),
+                                Err(_) => hyper::Response::builder().status(500).body(empty()),
+                            }
+                        }
                     }),
                 )
                 .await;
         });
     }
+}
+
+fn empty() -> BoxBody<Bytes, hyper::Error> {
+    Empty::<Bytes>::new()
+        .map_err(|never| match never {})
+        .boxed()
 }

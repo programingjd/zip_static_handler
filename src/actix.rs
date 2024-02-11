@@ -1,41 +1,17 @@
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::{Builder, StatusCode};
 use actix_web::body::BoxBody;
 use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
-use std::fmt::{Display, Formatter};
-use std::io::ErrorKind;
 use std::str::from_utf8;
 
 impl Handler {
-    pub fn handle_request(
-        &self,
-        request: HttpRequest,
-    ) -> std::result::Result<HttpResponse<BoxBody>, Error> {
+    pub fn handle_request(&self, request: HttpRequest) -> Result<HttpResponse<BoxBody>> {
         self.handle(RequestAdapter { inner: request })
     }
 }
-
-impl From<Error> for std::io::Error {
-    fn from(value: Error) -> Self {
-        std::io::Error::new(ErrorKind::Other, value.to_string())
-    }
-}
-
-#[derive(Debug)]
-struct ErrorAdapter {
-    message: String,
-}
-
-impl Display for ErrorAdapter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for ErrorAdapter {}
 
 struct RequestAdapter {
     inner: HttpRequest,

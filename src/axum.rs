@@ -1,4 +1,4 @@
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -13,16 +13,8 @@ type AxumResponse = axum_core::response::Response;
 type AxumRequest = axum_core::extract::Request;
 
 impl Handler {
-    pub fn handle_request(&self, request: AxumRequest) -> std::result::Result<AxumResponse, Error> {
+    pub fn handle_request(&self, request: AxumRequest) -> Result<AxumResponse> {
         self.handle(RequestAdapter { inner: request })
-    }
-}
-
-impl Error {
-    pub fn boxed(self) -> Box<impl std::error::Error + Send + Sync> {
-        Box::new(ErrorAdapter {
-            message: self.to_string(),
-        })
     }
 }
 

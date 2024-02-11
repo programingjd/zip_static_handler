@@ -2,6 +2,8 @@ use axum::extract::{Request, State};
 use axum::response::Response;
 use axum::routing::get;
 use axum::Router;
+use axum_core::response::IntoResponse;
+use http::StatusCode;
 use reqwest::Client;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -9,7 +11,7 @@ use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::Handler;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .compact()
         .with_env_filter("zip_static_handler=info,axum::rejection=trace")
@@ -29,8 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         Handler::builder()
             .with_zip_prefix("about.programingjd.me-main/")
             .with_zip(zip)
-            .try_build()
-            .map_err(|err| err.boxed())?,
+            .try_build()?,
     );
     axum::serve(listener, app().with_state(state)).await?;
     Ok(())
@@ -47,10 +48,13 @@ async fn version_handler() -> &'static str {
 }
 
 async fn static_handler(State(state): State<Arc<Handler>>, request: Request) -> Response {
-    state.handle_request(request).unwrap()
+    match state.handle_request(request) {
+        Ok(response) => response,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    }
 }
 
-async fn download(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {
     let response = Client::default().get(url).send().await?;
     if !response.status().is_success() {
         panic!("failed to download {url} ({})", response.status().as_str());

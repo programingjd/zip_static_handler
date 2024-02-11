@@ -1,4 +1,3 @@
-use crate::errors::Error;
 use brotli::enc::BrotliEncoderParams;
 use inflate::InflateWriter;
 use std::borrow::Cow;
@@ -12,7 +11,7 @@ pub(crate) fn decompress(zip_file_header: ZipLocalFileHeader) -> crate::errors::
             zip_file_header.compressed_data.as_ref(),
             zip_file_header.uncompressed_size as usize,
         ))),
-        _ => Err(Error::Message("unsupported compression")),
+        _ => Err("unsupported compression".into()),
     }
 }
 

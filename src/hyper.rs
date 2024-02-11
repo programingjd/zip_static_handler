@@ -1,4 +1,4 @@
-use crate::errors::{Error, Result};
+use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -8,41 +8,16 @@ use http_body_util::{BodyExt, Empty, Full};
 use hyper::body::Bytes;
 use hyper::http;
 use hyper::http::{HeaderName, HeaderValue};
-use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
 
 type HyperResponse = hyper::Response<BoxBody<Bytes, hyper::Error>>;
 type HyperRequest = hyper::Request<hyper::body::Incoming>;
 
 impl Handler {
-    pub fn handle_request(
-        &self,
-        request: HyperRequest,
-    ) -> std::result::Result<HyperResponse, Error> {
+    pub fn handle_request(&self, request: HyperRequest) -> Result<HyperResponse> {
         self.handle(RequestAdapter { inner: request })
     }
 }
-
-impl Error {
-    pub fn boxed(self) -> Box<impl std::error::Error + Send + Sync> {
-        Box::new(ErrorAdapter {
-            message: self.to_string(),
-        })
-    }
-}
-
-#[derive(Debug)]
-struct ErrorAdapter {
-    message: String,
-}
-
-impl Display for ErrorAdapter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for ErrorAdapter {}
 
 struct RequestAdapter {
     inner: HyperRequest,
@@ -105,8 +80,6 @@ impl Builder<HyperResponse> for ResponseBuilderAdapter {
 
     fn with_body(self, body: Option<&[u8]>) -> Result<HyperResponse> {
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        self.inner
-            .body(body)
-            .map_err(|err| Error::Wrapped(Box::new(err)))
+        Ok(self.inner.body(body)?)
     }
 }
