@@ -161,6 +161,6 @@ pub mod request {
         fn method(&self) -> &[u8];
         fn path(&self) -> &[u8];
         fn first_header_value(&self, key: &'static [u8]) -> Option<&[u8]>;
-        fn response_builder_with_status(code: StatusCode) -> B;
+        fn response_builder_with_status(&mut self, code: StatusCode) -> B;
     }
 }

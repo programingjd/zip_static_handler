@@ -20,19 +20,21 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn handle<R, B: Builder<R>, T: Request<R, B>>(&self, request: T) -> Result<R> {
+    pub fn handle<R, B: Builder<R>, T: Request<R, B>>(&self, mut request: T) -> Result<R> {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
-                return T::response_builder_with_status(StatusCode::BadRequest)
+                return request
+                    .response_builder_with_status(StatusCode::BadRequest)
                     .append_headers(error_headers())
                     .with_body(None);
             }
         }
-        let method = request.method();
-        match method {
-            method::GET | method::HEAD => {}
+        let is_get = match request.method() {
+            method::GET => true,
+            method::HEAD => false,
             _ => {
-                return T::response_builder_with_status(StatusCode::MethodNotAllowed)
+                return request
+                    .response_builder_with_status(StatusCode::MethodNotAllowed)
                     .append_headers(error_headers())
                     .with_body(None)
             }
@@ -45,17 +47,20 @@ impl Handler {
                 let none_match = request.first_header_value(IF_NONE_MATCH);
                 let if_match = request.first_header_value(IF_MATCH);
                 if none_match.is_some() && none_match == etag {
-                    T::response_builder_with_status(StatusCode::NotModified)
+                    request
+                        .response_builder_with_status(StatusCode::NotModified)
                         .append_headers(headers.iter())
                         .with_body(None)
                 } else if if_match.is_some() && if_match != etag {
-                    T::response_builder_with_status(StatusCode::PreconditionFailed)
+                    request
+                        .response_builder_with_status(StatusCode::PreconditionFailed)
                         .append_headers(headers.iter())
                         .with_body(None)
                 } else {
-                    T::response_builder_with_status(StatusCode::OK)
+                    request
+                        .response_builder_with_status(StatusCode::OK)
                         .append_headers(headers.iter())
-                        .with_body(if method == method::GET {
+                        .with_body(if is_get {
                             if let Some(ref body) = file.content {
                                 Some(body.as_slice())
                             } else {
@@ -66,12 +71,14 @@ impl Handler {
                         })
                 }
             } else {
-                T::response_builder_with_status(StatusCode::PermanentRedirect)
+                request
+                    .response_builder_with_status(StatusCode::PermanentRedirect)
                     .append_headers(headers.iter())
                     .with_body(None)
             }
         } else {
-            T::response_builder_with_status(StatusCode::NotFound)
+            request
+                .response_builder_with_status(StatusCode::NotFound)
                 .append_headers(error_headers())
                 .with_body(None)
         }

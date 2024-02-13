@@ -55,7 +55,7 @@ impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(code: StatusCode) -> AxumResponseBuilder {
+    fn response_builder_with_status(&mut self, code: StatusCode) -> AxumResponseBuilder {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let headers = HeaderMap::new();
         AxumResponseBuilder {

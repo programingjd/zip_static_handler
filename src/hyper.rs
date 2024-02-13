@@ -42,7 +42,7 @@ impl Request<HyperResponse, ResponseBuilderAdapter> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(code: StatusCode) -> ResponseBuilderAdapter {
+    fn response_builder_with_status(&mut self, code: StatusCode) -> ResponseBuilderAdapter {
         let code: u16 = code.into();
         ResponseBuilderAdapter {
             inner: hyper::Response::builder().status(code),

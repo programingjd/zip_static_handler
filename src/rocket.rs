@@ -58,7 +58,7 @@ impl<'a, 'b> Request<Outcome<'a>, ResponseBuilderAdapter<'a>> for RequestAdapter
             .and_then(|key| self.inner.headers().get_one(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(code: StatusCode) -> ResponseBuilderAdapter<'a> {
+    fn response_builder_with_status(&mut self, code: StatusCode) -> ResponseBuilderAdapter<'a> {
         let code: u16 = code.into();
         let mut builder = Response::build();
         builder.status(Status::new(code));
