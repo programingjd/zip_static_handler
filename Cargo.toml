@@ -146,3 +146,5 @@ required-features = ["rocket"]
 name = "auto_update"
 required-features = ["axum"]
 
+[[example]]
+name = "async"
