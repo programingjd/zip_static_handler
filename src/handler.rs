@@ -5,7 +5,7 @@ use crate::http::headers::{
 };
 use crate::http::method;
 use crate::http::request::Request;
-use crate::http::response::{Builder, StatusCode};
+use crate::http::response::StatusCode;
 use crate::path::{extension, filename, path};
 use crate::types::error_headers;
 use std::borrow::Cow;
@@ -20,21 +20,21 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn handle<R, B: Builder<R>, T: Request<R, B>>(&self, request: T) -> Result<R> {
+    pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Result<Resp> {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
-                return request
-                    .response_builder_with_status(StatusCode::BadRequest)
-                    .build(error_headers(), None::<Vec<u8>>);
+                return request.response(StatusCode::BadRequest, error_headers(), None::<Vec<u8>>);
             }
         }
         let is_get = match request.method() {
             method::GET => true,
             method::HEAD => false,
             _ => {
-                return request
-                    .response_builder_with_status(StatusCode::MethodNotAllowed)
-                    .build(error_headers(), None::<Vec<u8>>)
+                return request.response(
+                    StatusCode::MethodNotAllowed,
+                    error_headers(),
+                    None::<Vec<u8>>,
+                )
             }
         };
         let path = String::from_utf8_lossy(request.path());
@@ -45,15 +45,16 @@ impl Handler {
                 let none_match = request.first_header_value(IF_NONE_MATCH);
                 let if_match = request.first_header_value(IF_MATCH);
                 if none_match.is_some() && none_match == etag {
-                    request
-                        .response_builder_with_status(StatusCode::NotModified)
-                        .build(headers.iter(), None::<Vec<u8>>)
+                    request.response(StatusCode::NotModified, headers.iter(), None::<Vec<u8>>)
                 } else if if_match.is_some() && if_match != etag {
-                    request
-                        .response_builder_with_status(StatusCode::PreconditionFailed)
-                        .build(headers.iter(), None::<Vec<u8>>)
+                    request.response(
+                        StatusCode::PreconditionFailed,
+                        headers.iter(),
+                        None::<Vec<u8>>,
+                    )
                 } else {
-                    request.response_builder_with_status(StatusCode::OK).build(
+                    request.response(
+                        StatusCode::OK,
                         headers.iter(),
                         if is_get {
                             if let Some(ref body) = file.content {
@@ -67,14 +68,14 @@ impl Handler {
                     )
                 }
             } else {
-                request
-                    .response_builder_with_status(StatusCode::PermanentRedirect)
-                    .build(headers.iter(), None::<Vec<u8>>)
+                request.response(
+                    StatusCode::PermanentRedirect,
+                    headers.iter(),
+                    None::<Vec<u8>>,
+                )
             }
         } else {
-            request
-                .response_builder_with_status(StatusCode::NotFound)
-                .build(error_headers(), None::<Vec<u8>>)
+            request.response(StatusCode::NotFound, error_headers(), None::<Vec<u8>>)
         }
     }
 }

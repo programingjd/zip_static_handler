@@ -2,7 +2,7 @@ use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
-use crate::http::response::{Builder, StatusCode};
+use crate::http::response::StatusCode;
 use axum_core::response::IntoResponse;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use std::fmt::{Display, Formatter};
@@ -35,12 +35,7 @@ struct RequestAdapter {
     inner: AxumRequest,
 }
 
-struct AxumResponseBuilder {
-    status_code: HttpStatusCode,
-    headers: HeaderMap,
-}
-
-impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
+impl Request<AxumResponse> for RequestAdapter {
     fn method(&self) -> &[u8] {
         self.inner.method().as_str().as_bytes()
     }
@@ -55,24 +50,14 @@ impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(self, code: StatusCode) -> AxumResponseBuilder {
-        let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
-        let headers = HeaderMap::new();
-        AxumResponseBuilder {
-            status_code,
-            headers,
-        }
-    }
-}
-
-impl Builder<AxumResponse> for AxumResponseBuilder {
-    fn build(
+    fn response(
         self,
+        code: StatusCode,
         headers: impl Iterator<Item = impl AsRef<Line>>,
         body: Option<impl AsRef<[u8]> + Send>,
     ) -> Result<AxumResponse> {
-        let status_code = self.status_code;
-        let mut map = self.headers;
+        let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
+        let mut map = HeaderMap::new();
         headers.for_each(|ref line| {
             let line = line.as_ref();
             if let Ok(name) = HeaderName::from_bytes(line.key) {

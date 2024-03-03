@@ -113,9 +113,6 @@ pub mod headers {
 }
 
 pub mod response {
-    use crate::errors::Result;
-    use crate::http::headers::Line;
-
     pub enum StatusCode {
         OK,
         NotModified,
@@ -141,14 +138,6 @@ pub mod response {
             }
         }
     }
-
-    pub trait Builder<R> {
-        fn build(
-            self,
-            headers: impl Iterator<Item = impl AsRef<Line> + Send>,
-            body: Option<impl AsRef<[u8]> + Send>,
-        ) -> Result<R>;
-    }
 }
 
 pub mod method {
@@ -158,12 +147,19 @@ pub mod method {
 }
 
 pub mod request {
-    use crate::http::response::{Builder, StatusCode};
+    use crate::errors::Result;
+    use crate::http::headers::Line;
+    use crate::http::response::StatusCode;
 
-    pub trait Request<R, B: Builder<R>> {
+    pub trait Request<R> {
         fn method(&self) -> &[u8];
         fn path(&self) -> &[u8];
         fn first_header_value(&self, key: &'static [u8]) -> Option<&[u8]>;
-        fn response_builder_with_status(self, code: StatusCode) -> B;
+        fn response(
+            self,
+            code: StatusCode,
+            headers: impl Iterator<Item = impl AsRef<Line> + Send>,
+            body: Option<impl AsRef<[u8]> + Send>,
+        ) -> Result<R>;
     }
 }

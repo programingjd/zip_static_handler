@@ -1,11 +1,11 @@
+use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
-use crate::http::response::{Builder, StatusCode};
+use crate::http::response::StatusCode;
 use crate::http::OwnedOrStatic;
 use rocket::http::uri::Path;
 use rocket::http::{Header, Status};
-use rocket::response::Builder as ResponseBuilder;
 use rocket::route::Handler as RocketHandler;
 use rocket::route::Outcome;
 use rocket::serde::__private::from_utf8_lossy;
@@ -39,11 +39,7 @@ struct RequestAdapter<'a, 'b> {
     path: Path<'a>,
 }
 
-struct ResponseBuilderAdapter<'a> {
-    inner: ResponseBuilder<'a>,
-}
-
-impl<'a, 'b> Request<Outcome<'a>, ResponseBuilderAdapter<'a>> for RequestAdapter<'a, 'b> {
+impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
     fn method(&self) -> &[u8] {
         self.inner.method().as_str().as_bytes()
     }
@@ -58,24 +54,18 @@ impl<'a, 'b> Request<Outcome<'a>, ResponseBuilderAdapter<'a>> for RequestAdapter
             .and_then(|key| self.inner.headers().get_one(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(self, code: StatusCode) -> ResponseBuilderAdapter<'a> {
+    fn response(
+        self,
+        code: StatusCode,
+        headers: impl Iterator<Item = impl AsRef<Line>>,
+        body: Option<impl AsRef<[u8]> + Send>,
+    ) -> Result<Outcome<'a>> {
         let code: u16 = code.into();
         let mut builder = Response::build();
         builder.status(Status::new(code));
-        ResponseBuilderAdapter { inner: builder }
-    }
-}
-
-impl<'a> Builder<Outcome<'a>> for ResponseBuilderAdapter<'a> {
-    fn build(
-        self,
-        headers: impl Iterator<Item = impl AsRef<Line>>,
-        body: Option<impl AsRef<[u8]> + Send>,
-    ) -> crate::errors::Result<Outcome<'a>> {
-        let mut inner = self.inner;
         headers.for_each(|ref line| {
             let line = line.as_ref().clone();
-            inner.header(Header::new(
+            builder.header(Header::new(
                 from_utf8_lossy(line.key),
                 match line.value {
                     OwnedOrStatic::Owned(vec) => Cow::Owned(from_utf8_lossy(&vec).to_string()),
@@ -86,8 +76,8 @@ impl<'a> Builder<Outcome<'a>> for ResponseBuilderAdapter<'a> {
         if let Some(bytes) = body {
             let bytes = bytes.as_ref();
             let len = bytes.len();
-            inner.sized_body(Some(len), Cursor::new(bytes.to_vec()));
+            builder.sized_body(Some(len), Cursor::new(bytes.to_vec()));
         }
-        Ok(Outcome::Success(inner.finalize()))
+        Ok(Outcome::Success(builder.finalize()))
     }
 }

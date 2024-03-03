@@ -75,8 +75,8 @@ default-features = false
 features = []
 
 [features]
-#default = []
-default = ["hyper", "axum", "actix", "rocket"]
+default = []
+#default = ["hyper", "axum", "actix", "rocket"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
