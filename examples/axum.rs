@@ -48,7 +48,7 @@ async fn version_handler() -> &'static str {
 }
 
 async fn static_handler(State(state): State<Arc<Handler>>, request: Request) -> Response {
-    match state.handle_request(request) {
+    match state.handle_axum_request(request) {
         Ok(response) => response,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
     }

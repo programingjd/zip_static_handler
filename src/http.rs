@@ -143,8 +143,11 @@ pub mod response {
     }
 
     pub trait Builder<R> {
-        fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self;
-        fn with_body(self, body: Option<&[u8]>) -> Result<R>;
+        fn build(
+            self,
+            headers: impl Iterator<Item = impl AsRef<Line> + Send>,
+            body: Option<impl AsRef<[u8]> + Send>,
+        ) -> Result<R>;
     }
 }
 
@@ -161,6 +164,6 @@ pub mod request {
         fn method(&self) -> &[u8];
         fn path(&self) -> &[u8];
         fn first_header_value(&self, key: &'static [u8]) -> Option<&[u8]>;
-        fn response_builder_with_status(&mut self, code: StatusCode) -> B;
+        fn response_builder_with_status(self, code: StatusCode) -> B;
     }
 }

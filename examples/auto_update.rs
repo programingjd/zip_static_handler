@@ -101,7 +101,7 @@ async fn update_webhook(
 
 async fn static_handler(State(state): State<Arc<RwLock<Handler>>>, request: Request) -> Response {
     if let Ok(handler) = state.read() {
-        handler.handle_request(request).unwrap()
+        handler.handle_axum_request(request).unwrap()
     } else {
         Response::builder().status(500).body(().into()).unwrap()
     }

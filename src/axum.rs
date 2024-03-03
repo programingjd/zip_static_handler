@@ -13,7 +13,7 @@ type AxumResponse = axum_core::response::Response;
 type AxumRequest = axum_core::extract::Request;
 
 impl Handler {
-    pub fn handle_request(&self, request: AxumRequest) -> Result<AxumResponse> {
+    pub fn handle_axum_request(&self, request: AxumRequest) -> Result<AxumResponse> {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -55,7 +55,7 @@ impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(&mut self, code: StatusCode) -> AxumResponseBuilder {
+    fn response_builder_with_status(self, code: StatusCode) -> AxumResponseBuilder {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let headers = HeaderMap::new();
         AxumResponseBuilder {
@@ -66,7 +66,11 @@ impl Request<AxumResponse, AxumResponseBuilder> for RequestAdapter {
 }
 
 impl Builder<AxumResponse> for AxumResponseBuilder {
-    fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self {
+    fn build(
+        self,
+        headers: impl Iterator<Item = impl AsRef<Line>>,
+        body: Option<impl AsRef<[u8]> + Send>,
+    ) -> Result<AxumResponse> {
         let status_code = self.status_code;
         let mut map = self.headers;
         headers.for_each(|ref line| {
@@ -77,17 +81,10 @@ impl Builder<AxumResponse> for AxumResponseBuilder {
                 }
             }
         });
-        Self {
-            status_code,
-            headers: map,
-        }
-    }
-
-    fn with_body(self, body: Option<&[u8]>) -> Result<AxumResponse> {
         Ok(if let Some(bytes) = body {
-            (self.status_code, self.headers, bytes.to_vec()).into_response()
+            (status_code, map, bytes.as_ref().to_vec()).into_response()
         } else {
-            (self.status_code, self.headers).into_response()
+            (status_code, map).into_response()
         })
     }
 }

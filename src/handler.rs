@@ -20,13 +20,12 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn handle<R, B: Builder<R>, T: Request<R, B>>(&self, mut request: T) -> Result<R> {
+    pub fn handle<R, B: Builder<R>, T: Request<R, B>>(&self, request: T) -> Result<R> {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
                 return request
                     .response_builder_with_status(StatusCode::BadRequest)
-                    .append_headers(error_headers())
-                    .with_body(None);
+                    .build(error_headers(), None::<Vec<u8>>);
             }
         }
         let is_get = match request.method() {
@@ -35,8 +34,7 @@ impl Handler {
             _ => {
                 return request
                     .response_builder_with_status(StatusCode::MethodNotAllowed)
-                    .append_headers(error_headers())
-                    .with_body(None)
+                    .build(error_headers(), None::<Vec<u8>>)
             }
         };
         let path = String::from_utf8_lossy(request.path());
@@ -49,38 +47,34 @@ impl Handler {
                 if none_match.is_some() && none_match == etag {
                     request
                         .response_builder_with_status(StatusCode::NotModified)
-                        .append_headers(headers.iter())
-                        .with_body(None)
+                        .build(headers.iter(), None::<Vec<u8>>)
                 } else if if_match.is_some() && if_match != etag {
                     request
                         .response_builder_with_status(StatusCode::PreconditionFailed)
-                        .append_headers(headers.iter())
-                        .with_body(None)
+                        .build(headers.iter(), None::<Vec<u8>>)
                 } else {
-                    request
-                        .response_builder_with_status(StatusCode::OK)
-                        .append_headers(headers.iter())
-                        .with_body(if is_get {
+                    request.response_builder_with_status(StatusCode::OK).build(
+                        headers.iter(),
+                        if is_get {
                             if let Some(ref body) = file.content {
-                                Some(body.as_slice())
+                                Some(body)
                             } else {
                                 None
                             }
                         } else {
                             None
-                        })
+                        },
+                    )
                 }
             } else {
                 request
                     .response_builder_with_status(StatusCode::PermanentRedirect)
-                    .append_headers(headers.iter())
-                    .with_body(None)
+                    .build(headers.iter(), None::<Vec<u8>>)
             }
         } else {
             request
                 .response_builder_with_status(StatusCode::NotFound)
-                .append_headers(error_headers())
-                .with_body(None)
+                .build(error_headers(), None::<Vec<u8>>)
         }
     }
 }

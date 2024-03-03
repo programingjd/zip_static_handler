@@ -8,7 +8,7 @@ use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
 use std::str::from_utf8;
 
 impl Handler {
-    pub fn handle_request(&self, request: HttpRequest) -> Result<HttpResponse<BoxBody>> {
+    pub fn handle_actix_request(&self, request: HttpRequest) -> Result<HttpResponse<BoxBody>> {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -36,7 +36,7 @@ impl Request<HttpResponse<BoxBody>, ResponseBuilderAdapter> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(&mut self, code: StatusCode) -> ResponseBuilderAdapter {
+    fn response_builder_with_status(self, code: StatusCode) -> ResponseBuilderAdapter {
         let code: u16 = code.into();
         ResponseBuilderAdapter {
             inner: HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap()),
@@ -45,8 +45,8 @@ impl Request<HttpResponse<BoxBody>, ResponseBuilderAdapter> for RequestAdapter {
 }
 
 impl ResponseBuilderAdapter {
-    fn full(slice: &[u8]) -> BoxBody {
-        BoxBody::new(slice.to_vec())
+    fn full(slice: impl AsRef<[u8]> + Send) -> BoxBody {
+        BoxBody::new(slice.as_ref().to_vec())
     }
     fn empty() -> BoxBody {
         BoxBody::new(())
@@ -54,17 +54,17 @@ impl ResponseBuilderAdapter {
 }
 
 impl Builder<HttpResponse<BoxBody>> for ResponseBuilderAdapter {
-    fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self {
+    fn build(
+        self,
+        headers: impl Iterator<Item = impl AsRef<Line>>,
+        body: Option<impl AsRef<[u8]> + Send>,
+    ) -> Result<HttpResponse<BoxBody>> {
         let mut inner = self.inner;
         headers.for_each(|ref line| {
             let line = line.as_ref();
             inner.append_header((line.key, line.value.as_ref()));
         });
-        Self { inner }
-    }
-
-    fn with_body(mut self, body: Option<&[u8]>) -> Result<HttpResponse<BoxBody>> {
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        Ok(self.inner.body(body))
+        Ok(inner.body(body))
     }
 }

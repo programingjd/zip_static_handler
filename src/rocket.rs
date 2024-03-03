@@ -58,7 +58,7 @@ impl<'a, 'b> Request<Outcome<'a>, ResponseBuilderAdapter<'a>> for RequestAdapter
             .and_then(|key| self.inner.headers().get_one(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(&mut self, code: StatusCode) -> ResponseBuilderAdapter<'a> {
+    fn response_builder_with_status(self, code: StatusCode) -> ResponseBuilderAdapter<'a> {
         let code: u16 = code.into();
         let mut builder = Response::build();
         builder.status(Status::new(code));
@@ -67,7 +67,11 @@ impl<'a, 'b> Request<Outcome<'a>, ResponseBuilderAdapter<'a>> for RequestAdapter
 }
 
 impl<'a> Builder<Outcome<'a>> for ResponseBuilderAdapter<'a> {
-    fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self {
+    fn build(
+        self,
+        headers: impl Iterator<Item = impl AsRef<Line>>,
+        body: Option<impl AsRef<[u8]> + Send>,
+    ) -> crate::errors::Result<Outcome<'a>> {
         let mut inner = self.inner;
         headers.for_each(|ref line| {
             let line = line.as_ref().clone();
@@ -79,13 +83,10 @@ impl<'a> Builder<Outcome<'a>> for ResponseBuilderAdapter<'a> {
                 },
             ));
         });
-        Self { inner }
-    }
-
-    fn with_body(self, body: Option<&[u8]>) -> crate::errors::Result<Outcome<'a>> {
-        let mut inner = self.inner;
         if let Some(bytes) = body {
-            inner.sized_body(body.map(|it| it.len()), Cursor::new(bytes.to_vec()));
+            let bytes = bytes.as_ref();
+            let len = bytes.len();
+            inner.sized_body(Some(len), Cursor::new(bytes.to_vec()));
         }
         Ok(Outcome::Success(inner.finalize()))
     }

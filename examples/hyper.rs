@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     service_fn(move |request| {
                         let handler = handler.clone();
                         async move {
-                            match handler.handle_request(request) {
+                            match handler.handle_hyper_request(request) {
                                 Ok(response) => Ok(response),
                                 Err(_) => hyper::Response::builder().status(500).body(empty()),
                             }

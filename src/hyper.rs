@@ -14,7 +14,7 @@ type HyperResponse = hyper::Response<BoxBody<Bytes, hyper::Error>>;
 type HyperRequest = hyper::Request<hyper::body::Incoming>;
 
 impl Handler {
-    pub fn handle_request(&self, request: HyperRequest) -> Result<HyperResponse> {
+    pub fn handle_hyper_request(&self, request: HyperRequest) -> Result<HyperResponse> {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -42,7 +42,7 @@ impl Request<HyperResponse, ResponseBuilderAdapter> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response_builder_with_status(&mut self, code: StatusCode) -> ResponseBuilderAdapter {
+    fn response_builder_with_status(self, code: StatusCode) -> ResponseBuilderAdapter {
         let code: u16 = code.into();
         ResponseBuilderAdapter {
             inner: hyper::Response::builder().status(code),
@@ -51,8 +51,8 @@ impl Request<HyperResponse, ResponseBuilderAdapter> for RequestAdapter {
 }
 
 impl ResponseBuilderAdapter {
-    fn full(slice: &[u8]) -> BoxBody<Bytes, hyper::Error> {
-        Full::new(Bytes::copy_from_slice(slice))
+    fn full(slice: impl AsRef<[u8]> + Send) -> BoxBody<Bytes, hyper::Error> {
+        Full::new(Bytes::copy_from_slice(slice.as_ref()))
             .map_err(|never| match never {})
             .boxed()
     }
@@ -64,7 +64,11 @@ impl ResponseBuilderAdapter {
 }
 
 impl Builder<HyperResponse> for ResponseBuilderAdapter {
-    fn append_headers(self, headers: impl Iterator<Item = impl AsRef<Line>>) -> Self {
+    fn build(
+        self,
+        headers: impl Iterator<Item = impl AsRef<Line>>,
+        body: Option<impl AsRef<[u8]> + Send>,
+    ) -> Result<HyperResponse> {
         let mut inner = self.inner;
         let map = inner.headers_mut().unwrap();
         headers.for_each(|ref line| {
@@ -75,11 +79,7 @@ impl Builder<HyperResponse> for ResponseBuilderAdapter {
                 }
             }
         });
-        Self { inner }
-    }
-
-    fn with_body(self, body: Option<&[u8]>) -> Result<HyperResponse> {
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        Ok(self.inner.body(body)?)
+        Ok(inner.body(body)?)
     }
 }

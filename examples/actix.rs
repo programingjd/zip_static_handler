@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn static_handler(state: Data<Arc<Handler>>, request: HttpRequest) -> HttpResponse<BoxBody> {
-    match state.handle_request(request) {
+    match state.handle_actix_request(request) {
         Ok(response) => response,
         Err(_) => HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR),
     }
