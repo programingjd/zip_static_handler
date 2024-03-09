@@ -1,5 +1,4 @@
 use actix_web::body::BoxBody;
-use actix_web::http::StatusCode;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
 use reqwest::Client;
@@ -33,10 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn static_handler(state: Data<Arc<Handler>>, request: HttpRequest) -> HttpResponse<BoxBody> {
-    match state.handle_actix_request(request) {
-        Ok(response) => response,
-        Err(_) => HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR),
-    }
+    state.handle_actix_request(request)
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {

@@ -1,4 +1,3 @@
-use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -30,7 +29,6 @@ impl RocketHandler for HandlerAdapter {
                 inner: request,
                 path,
             })
-            .unwrap()
     }
 }
 
@@ -54,12 +52,12 @@ impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
             .and_then(|key| self.inner.headers().get_one(key).map(|it| it.as_bytes()))
     }
 
-    fn response(
+    fn response<'c>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = impl AsRef<Line>>,
+        headers: impl Iterator<Item = &'c Line>,
         body: Option<impl AsRef<[u8]> + Send>,
-    ) -> Result<Outcome<'a>> {
+    ) -> Outcome<'a> {
         let code: u16 = code.into();
         let mut builder = Response::build();
         builder.status(Status::new(code));
@@ -78,6 +76,6 @@ impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
             let len = bytes.len();
             builder.sized_body(Some(len), Cursor::new(bytes.to_vec()));
         }
-        Ok(Outcome::Success(builder.finalize()))
+        Outcome::Success(builder.finalize())
     }
 }

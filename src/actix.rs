@@ -1,4 +1,3 @@
-use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -8,7 +7,7 @@ use actix_web::{HttpRequest, HttpResponse};
 use std::str::from_utf8;
 
 impl Handler {
-    pub fn handle_actix_request(&self, request: HttpRequest) -> Result<HttpResponse<BoxBody>> {
+    pub fn handle_actix_request(&self, request: HttpRequest) -> HttpResponse<BoxBody> {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -32,12 +31,12 @@ impl Request<HttpResponse<BoxBody>> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response(
+    fn response<'b>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = impl AsRef<Line>>,
+        headers: impl Iterator<Item = &'b Line>,
         body: Option<impl AsRef<[u8]> + Send>,
-    ) -> Result<HttpResponse<BoxBody>> {
+    ) -> HttpResponse<BoxBody> {
         let code: u16 = code.into();
         let mut builder = HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap());
         headers.for_each(|ref line| {
@@ -45,7 +44,7 @@ impl Request<HttpResponse<BoxBody>> for RequestAdapter {
             builder.append_header((line.key, line.value.as_ref()));
         });
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        Ok(builder.body(body))
+        builder.body(body)
     }
 }
 

@@ -6,23 +6,23 @@ use crate::http::headers::{
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref DEFAULT_HEADERS: Vec<(&'static [u8], &'static [u8])> = {
+    static ref DEFAULT_HEADERS: Vec<Line> = {
         let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
-            (ALLOW, b"GET, HEAD".as_slice()),
-            (X_CONTENT_TYPE_OPTIONS, b"nosniff".as_slice()),
-            (X_FRAME_OPTIONS, b"DENY".as_slice()),
-            (X_XSS_PROTECTION, b"1; mode=block".as_slice()),
-            (CORP, b"same-site".as_slice()),
-            (COEP, b"crendentialless".as_slice()),
-            (COOP, b"same-origin".as_slice()),
-            (CSP, b"default-src 'self';script-src 'wasm-unsafe-eval';script-src-elem 'self' 'unsafe-inline';script-src-attr 'none';worker-src 'self' blob:;style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;frame-src 'none';object-src 'none';base-uri 'none';frame-ancestors 'none';form-action 'none'".as_slice()),
-            (HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
+            (ALLOW, b"GET, HEAD".as_slice()).into(),
+            (X_CONTENT_TYPE_OPTIONS, b"nosniff".as_slice()).into(),
+            (X_FRAME_OPTIONS, b"DENY".as_slice()).into(),
+            (X_XSS_PROTECTION, b"1; mode=block".as_slice()).into(),
+            (CORP, b"same-site".as_slice()).into(),
+            (COEP, b"crendentialless".as_slice()).into(),
+            (COOP, b"same-origin".as_slice()).into(),
+            (CSP, b"default-src 'self';script-src 'wasm-unsafe-eval';script-src-elem 'self' 'unsafe-inline';script-src-attr 'none';worker-src 'self' blob:;style-src 'self' 'unsafe-inline';img-src 'self' data: blob:;font-src 'self' data:;frame-src 'none';object-src 'none';base-uri 'none';frame-ancestors 'none';form-action 'none'".as_slice()).into(),
+            (HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()).into(),
         ];
         headers
     };
-    static ref ERROR_HEADERS: Vec<(&'static [u8], &'static [u8])> = {
+    static ref ERROR_HEADERS: Vec<Line> = {
         let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
-            (ALLOW, b"GET, HEAD".as_slice()),
+            (ALLOW, b"GET, HEAD".as_slice()).into(),
             //(HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
         ];
         headers
@@ -35,12 +35,12 @@ const CACHE_CONTROL_REVALIDATE: &[u8] = b"public,max-age=3600,must-revalidate,st
 const CACHE_CONTROL_IMMUTABLE: &[u8] =
     b"public,max-age=86400,immutable,stale-while-revalidate=864000,stale-if-error=3600";
 
-pub(crate) fn default_headers() -> impl Iterator<Item = Line> {
-    DEFAULT_HEADERS.iter().map(|&it| it.into())
+pub(crate) fn default_headers() -> impl Iterator<Item = &'static Line> {
+    DEFAULT_HEADERS.iter()
 }
 
-pub(crate) fn error_headers() -> impl Iterator<Item = Line> {
-    ERROR_HEADERS.iter().map(|&it| it.into())
+pub(crate) fn error_headers() -> impl Iterator<Item = &'static Line> {
+    ERROR_HEADERS.iter()
 }
 
 pub(crate) fn headers_for_type(filename: &str, extension: &str) -> Option<HeadersAndCompression> {
@@ -180,7 +180,10 @@ fn headers_and_compression(
         Line::with_slice_value(CACHE_CONTROL, cache_control),
     ];
     HeadersAndCompression {
-        headers: default_headers.chain(new_headers).collect(),
+        headers: default_headers
+            .cloned()
+            .chain(new_headers.into_iter())
+            .collect(),
         compressible,
     }
 }

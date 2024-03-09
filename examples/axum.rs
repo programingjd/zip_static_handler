@@ -2,8 +2,6 @@ use axum::extract::{Request, State};
 use axum::response::Response;
 use axum::routing::get;
 use axum::Router;
-use axum_core::response::IntoResponse;
-use http::StatusCode;
 use reqwest::Client;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -20,13 +18,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_file(false)
         .try_init()
         .expect("could not init tracing subscriber");
-    let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let zip = download(&zip_download_branch_url(
         "programingjd",
         "about.programingjd.me",
         "main",
     ))
     .await?;
+    let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let state = Arc::new(
         Handler::builder()
             .with_zip_prefix("about.programingjd.me-main/")
@@ -48,10 +46,7 @@ async fn version_handler() -> &'static str {
 }
 
 async fn static_handler(State(state): State<Arc<Handler>>, request: Request) -> Response {
-    match state.handle_axum_request(request) {
-        Ok(response) => response,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    }
+    state.handle_axum_request(request)
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {

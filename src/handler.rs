@@ -20,7 +20,7 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Result<Resp> {
+    pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
                 return request.response(StatusCode::BadRequest, error_headers(), None::<Vec<u8>>);

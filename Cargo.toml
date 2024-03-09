@@ -74,13 +74,20 @@ version = "0.5"
 default-features = false
 features = []
 
+[dependencies.min_http11_parser]
+optional = true
+path = "../min_http11/parser"
+default-features = false
+features = ["_minimal"]
+
 [features]
-default = []
-#default = ["hyper", "axum", "actix", "rocket"]
+#default = []
+default = ["hyper", "axum", "actix", "rocket", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
 rocket = ["dep:rocket"]
+min_http11 = ["min_http11_parser/_minimal"]
 
 #http client for downloading zip from github
 [dev-dependencies.reqwest]
@@ -148,3 +155,6 @@ required-features = ["rocket"]
 name = "auto_update"
 required-features = ["axum"]
 
+[[example]]
+name = "min_http11"
+required-features = ["min_http11"]

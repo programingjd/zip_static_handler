@@ -5,6 +5,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
 use reqwest::Client;
+use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::spawn;
@@ -76,13 +77,13 @@ fn headers_and_compression(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let zip = download(&zip_download_branch_url(
         "programingjd",
         "about.programingjd.me",
         "main",
     ))
     .await?;
+    let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
     let handler = Arc::new(
         Handler::builder()
             .with_zip_prefix("about.programingjd.me-main/")
@@ -101,10 +102,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     service_fn(move |request| {
                         let handler = handler.clone();
                         async move {
-                            match handler.handle_hyper_request(request) {
-                                Ok(response) => Ok(response),
-                                Err(_) => hyper::Response::builder().status(500).body(empty()),
-                            }
+                            Ok::<hyper::Response<BoxBody<Bytes, hyper::Error>>, Infallible>(
+                                handler.handle_hyper_request(request),
+                            )
                         }
                     }),
                 )

@@ -1,4 +1,3 @@
-use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -13,7 +12,7 @@ type AxumResponse = axum_core::response::Response;
 type AxumRequest = axum_core::extract::Request;
 
 impl Handler {
-    pub fn handle_axum_request(&self, request: AxumRequest) -> Result<AxumResponse> {
+    pub fn handle_axum_request(&self, request: AxumRequest) -> AxumResponse {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -50,12 +49,12 @@ impl Request<AxumResponse> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response(
+    fn response<'b>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = impl AsRef<Line>>,
+        headers: impl Iterator<Item = &'b Line>,
         body: Option<impl AsRef<[u8]> + Send>,
-    ) -> Result<AxumResponse> {
+    ) -> AxumResponse {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let mut map = HeaderMap::new();
         headers.for_each(|ref line| {
@@ -66,10 +65,10 @@ impl Request<AxumResponse> for RequestAdapter {
                 }
             }
         });
-        Ok(if let Some(bytes) = body {
+        if let Some(bytes) = body {
             (status_code, map, bytes.as_ref().to_vec()).into_response()
         } else {
             (status_code, map).into_response()
-        })
+        }
     }
 }

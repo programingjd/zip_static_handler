@@ -1,4 +1,3 @@
-use crate::errors::Result;
 use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
@@ -13,7 +12,7 @@ type HyperResponse = hyper::Response<BoxBody<Bytes, hyper::Error>>;
 type HyperRequest = hyper::Request<hyper::body::Incoming>;
 
 impl Handler {
-    pub fn handle_hyper_request(&self, request: HyperRequest) -> Result<HyperResponse> {
+    pub fn handle_hyper_request(&self, request: HyperRequest) -> HyperResponse {
         self.handle(RequestAdapter { inner: request })
     }
 }
@@ -37,12 +36,12 @@ impl Request<HyperResponse> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response(
+    fn response<'a>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = impl AsRef<Line>>,
+        headers: impl Iterator<Item = &'a Line>,
         body: Option<impl AsRef<[u8]> + Send>,
-    ) -> Result<HyperResponse> {
+    ) -> HyperResponse {
         let code: u16 = code.into();
         let mut builder = hyper::Response::builder().status(code);
         let map = builder.headers_mut().unwrap();
@@ -55,7 +54,7 @@ impl Request<HyperResponse> for RequestAdapter {
             }
         });
         let body = body.map(Self::full).unwrap_or_else(Self::empty);
-        Ok(builder.body(body)?)
+        builder.body(body).unwrap()
     }
 }
 

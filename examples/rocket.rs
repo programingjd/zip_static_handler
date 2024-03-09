@@ -1,7 +1,7 @@
 use reqwest::Client;
 use rocket::http::Method::{Get, Head};
 use rocket::shield::{Frame, NoSniff, Shield};
-use rocket::Route;
+use rocket::{Config, Route};
 use std::error::Error;
 use std::sync::Arc;
 use zip_static_handler::github::zip_download_branch_url;
@@ -25,6 +25,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let head = Route::new(Head, "/<path..>", HandlerAdapter);
     let get = Route::new(Get, "/<path..>", HandlerAdapter);
     let rocket = rocket::build()
+        .configure(Config {
+            address: [0, 0, 0, 0].into(),
+            port: 8080,
+            ..Config::default()
+        })
         .manage(state)
         // X-Content-Type-Options: nosniff and X-Frame-Options: deny
         // are already set by the handler.

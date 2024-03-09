@@ -122,6 +122,7 @@ pub mod response {
         NotFound,
         MethodNotAllowed,
         PreconditionFailed,
+        InternalServerError,
     }
 
     impl From<StatusCode> for u16 {
@@ -135,6 +136,7 @@ pub mod response {
                 StatusCode::NotFound => 404,
                 StatusCode::MethodNotAllowed => 405,
                 StatusCode::PreconditionFailed => 412,
+                StatusCode::InternalServerError => 500,
             }
         }
     }
@@ -147,7 +149,6 @@ pub mod method {
 }
 
 pub mod request {
-    use crate::errors::Result;
     use crate::http::headers::Line;
     use crate::http::response::StatusCode;
 
@@ -155,11 +156,11 @@ pub mod request {
         fn method(&self) -> &[u8];
         fn path(&self) -> &[u8];
         fn first_header_value(&self, key: &'static [u8]) -> Option<&[u8]>;
-        fn response(
+        fn response<'b>(
             self,
             code: StatusCode,
-            headers: impl Iterator<Item = impl AsRef<Line> + Send>,
+            headers: impl Iterator<Item = &'b Line>,
             body: Option<impl AsRef<[u8]> + Send>,
-        ) -> Result<R>;
+        ) -> R;
     }
 }
