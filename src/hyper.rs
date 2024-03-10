@@ -40,7 +40,7 @@ impl Request<HyperResponse> for RequestAdapter {
         self,
         code: StatusCode,
         headers: impl Iterator<Item = &'a Line>,
-        body: Option<impl AsRef<[u8]> + Send>,
+        body: Option<&'a [u8]>,
     ) -> HyperResponse {
         let code: u16 = code.into();
         let mut builder = hyper::Response::builder().status(code);

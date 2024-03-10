@@ -160,7 +160,7 @@ pub mod request {
             self,
             code: StatusCode,
             headers: impl Iterator<Item = &'b Line>,
-            body: Option<impl AsRef<[u8]> + Send>,
+            body: Option<&'b [u8]>,
         ) -> R;
     }
 }

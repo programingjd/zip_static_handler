@@ -49,11 +49,11 @@ impl Request<AxumResponse> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response<'b>(
+    fn response<'a>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = &'b Line>,
-        body: Option<impl AsRef<[u8]> + Send>,
+        headers: impl Iterator<Item = &'a Line>,
+        body: Option<&'a [u8]>,
     ) -> AxumResponse {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let mut map = HeaderMap::new();
@@ -66,7 +66,7 @@ impl Request<AxumResponse> for RequestAdapter {
             }
         });
         if let Some(bytes) = body {
-            (status_code, map, bytes.as_ref().to_vec()).into_response()
+            (status_code, map, bytes.to_vec()).into_response()
         } else {
             (status_code, map).into_response()
         }

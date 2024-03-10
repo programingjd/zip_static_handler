@@ -32,12 +32,12 @@ impl RocketHandler for HandlerAdapter {
     }
 }
 
-struct RequestAdapter<'a, 'b> {
-    inner: &'a RocketRequest<'b>,
-    path: Path<'a>,
+struct RequestAdapter<'r, 'o> {
+    inner: &'r RocketRequest<'o>,
+    path: Path<'r>,
 }
 
-impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
+impl<'r, 'o> Request<Outcome<'r>> for RequestAdapter<'r, 'o> {
     fn method(&self) -> &[u8] {
         self.inner.method().as_str().as_bytes()
     }
@@ -52,12 +52,12 @@ impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
             .and_then(|key| self.inner.headers().get_one(key).map(|it| it.as_bytes()))
     }
 
-    fn response<'c>(
+    fn response<'a>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = &'c Line>,
-        body: Option<impl AsRef<[u8]> + Send>,
-    ) -> Outcome<'a> {
+        headers: impl Iterator<Item = &'a Line>,
+        body: Option<&'a [u8]>,
+    ) -> Outcome<'r> {
         let code: u16 = code.into();
         let mut builder = Response::build();
         builder.status(Status::new(code));
@@ -72,7 +72,6 @@ impl<'a, 'b> Request<Outcome<'a>> for RequestAdapter<'a, 'b> {
             ));
         });
         if let Some(bytes) = body {
-            let bytes = bytes.as_ref();
             let len = bytes.len();
             builder.sized_body(Some(len), Cursor::new(bytes.to_vec()));
         }

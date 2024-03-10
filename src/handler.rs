@@ -23,7 +23,7 @@ impl Handler {
     pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
-                return request.response(StatusCode::BadRequest, error_headers(), None::<Vec<u8>>);
+                return request.response(StatusCode::BadRequest, error_headers(), None::<&[u8]>);
             }
         }
         let is_get = match request.method() {
@@ -33,7 +33,7 @@ impl Handler {
                 return request.response(
                     StatusCode::MethodNotAllowed,
                     error_headers(),
-                    None::<Vec<u8>>,
+                    None::<&[u8]>,
                 )
             }
         };
@@ -45,12 +45,12 @@ impl Handler {
                 let none_match = request.first_header_value(IF_NONE_MATCH);
                 let if_match = request.first_header_value(IF_MATCH);
                 if none_match.is_some() && none_match == etag {
-                    request.response(StatusCode::NotModified, headers.iter(), None::<Vec<u8>>)
+                    request.response(StatusCode::NotModified, headers.iter(), None::<&[u8]>)
                 } else if if_match.is_some() && if_match != etag {
                     request.response(
                         StatusCode::PreconditionFailed,
                         headers.iter(),
-                        None::<Vec<u8>>,
+                        None::<&[u8]>,
                     )
                 } else {
                     request.response(
@@ -58,7 +58,7 @@ impl Handler {
                         headers.iter(),
                         if is_get {
                             if let Some(ref body) = file.content {
-                                Some(body)
+                                Some(body.as_slice())
                             } else {
                                 None
                             }
@@ -68,14 +68,10 @@ impl Handler {
                     )
                 }
             } else {
-                request.response(
-                    StatusCode::PermanentRedirect,
-                    headers.iter(),
-                    None::<Vec<u8>>,
-                )
+                request.response(StatusCode::PermanentRedirect, headers.iter(), None::<&[u8]>)
             }
         } else {
-            request.response(StatusCode::NotFound, error_headers(), None::<Vec<u8>>)
+            request.response(StatusCode::NotFound, error_headers(), None::<&[u8]>)
         }
     }
 }

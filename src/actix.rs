@@ -31,11 +31,11 @@ impl Request<HttpResponse<BoxBody>> for RequestAdapter {
             .and_then(|key| self.inner.headers().get(key).map(|it| it.as_bytes()))
     }
 
-    fn response<'b>(
+    fn response<'a>(
         self,
         code: StatusCode,
-        headers: impl Iterator<Item = &'b Line>,
-        body: Option<impl AsRef<[u8]> + Send>,
+        headers: impl Iterator<Item = &'a Line>,
+        body: Option<&'a [u8]>,
     ) -> HttpResponse<BoxBody> {
         let code: u16 = code.into();
         let mut builder = HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap());
