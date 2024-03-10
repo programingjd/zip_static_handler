@@ -7,7 +7,6 @@ use crate::http::method;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use crate::path::{extension, filename, path};
-use crate::types::error_headers;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Cursor;
@@ -17,13 +16,18 @@ use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
 pub struct Handler {
     pub(crate) files: HashMap<String, Entry>,
+    pub(crate) error_headers: &'static [Line],
 }
 
 impl Handler {
     pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
-                return request.response(StatusCode::BadRequest, error_headers(), None::<&[u8]>);
+                return request.response(
+                    StatusCode::BadRequest,
+                    self.error_headers.iter(),
+                    None::<&[u8]>,
+                );
             }
         }
         let is_get = match request.method() {
@@ -32,7 +36,7 @@ impl Handler {
             _ => {
                 return request.response(
                     StatusCode::MethodNotAllowed,
-                    error_headers(),
+                    self.error_headers.iter(),
                     None::<&[u8]>,
                 )
             }
@@ -71,15 +75,19 @@ impl Handler {
                 request.response(StatusCode::PermanentRedirect, headers.iter(), None::<&[u8]>)
             }
         } else {
-            request.response(StatusCode::NotFound, error_headers(), None::<&[u8]>)
+            request.response(
+                StatusCode::NotFound,
+                self.error_headers.iter(),
+                None::<&[u8]>,
+            )
         }
     }
 }
 
 pub(crate) struct Entry {
-    headers: Vec<Line>,
-    content: Option<Vec<u8>>,
-    etag: Option<String>,
+    pub headers: Vec<Line>,
+    pub content: Option<Vec<u8>>,
+    pub etag: Option<String>,
 }
 
 pub trait HeaderSelector {
@@ -88,6 +96,7 @@ pub trait HeaderSelector {
         filename: &str,
         extension: &str,
     ) -> Option<HeadersAndCompression>;
+    fn error_headers(&self) -> &'static [Line];
 }
 
 pub struct HeadersAndCompression {

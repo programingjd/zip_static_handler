@@ -74,9 +74,15 @@ version = "0.5"
 default-features = false
 features = []
 
+[dependencies.tokio]
+optional = true
+version = "1.36"
+default-features = false
+features = ["io-util"]
+
 [dependencies.min_http11_parser]
 optional = true
-path = "../min_http11/parser"
+version = "0.0"
 default-features = false
 features = ["_minimal"]
 
@@ -87,7 +93,7 @@ hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
 rocket = ["dep:rocket"]
-min_http11 = ["min_http11_parser/_minimal"]
+min_http11 = ["min_http11_parser/_minimal", "dep:tokio"]
 
 #http client for downloading zip from github
 [dev-dependencies.reqwest]

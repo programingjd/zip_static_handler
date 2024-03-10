@@ -122,6 +122,7 @@ pub mod response {
         NotFound,
         MethodNotAllowed,
         PreconditionFailed,
+        RequestTooLarge,
         InternalServerError,
     }
 
@@ -136,6 +137,7 @@ pub mod response {
                 StatusCode::NotFound => 404,
                 StatusCode::MethodNotAllowed => 405,
                 StatusCode::PreconditionFailed => 412,
+                StatusCode::RequestTooLarge => 413,
                 StatusCode::InternalServerError => 500,
             }
         }

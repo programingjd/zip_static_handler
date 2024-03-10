@@ -1,7 +1,7 @@
 use crate::handler::{HeaderSelector, HeadersAndCompression};
 use crate::http::headers::{
-    Line, ALLOW, CACHE_CONTROL, COEP, CONTENT_TYPE, COOP, CORP, CSP, HSTS, SERVICE_WORKER_ALLOWED,
-    X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_XSS_PROTECTION,
+    Line, ALLOW, CACHE_CONTROL, COEP, CONTENT_LENGTH, CONTENT_TYPE, COOP, CORP, CSP, HSTS,
+    SERVICE_WORKER_ALLOWED, X_CONTENT_TYPE_OPTIONS, X_FRAME_OPTIONS, X_XSS_PROTECTION,
 };
 use lazy_static::lazy_static;
 
@@ -23,6 +23,7 @@ lazy_static! {
     static ref ERROR_HEADERS: Vec<Line> = {
         let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
             (ALLOW, b"GET, HEAD".as_slice()).into(),
+            (CONTENT_LENGTH, b"0".as_slice()).into(),
             //(HSTS, b"max-age=63072000; includeSubDomains; preload".as_slice()),
         ];
         headers
@@ -39,8 +40,8 @@ pub(crate) fn default_headers() -> impl Iterator<Item = &'static Line> {
     DEFAULT_HEADERS.iter()
 }
 
-pub(crate) fn error_headers() -> impl Iterator<Item = &'static Line> {
-    ERROR_HEADERS.iter()
+pub(crate) fn default_error_headers() -> &'static [Line] {
+    ERROR_HEADERS.as_slice()
 }
 
 pub(crate) fn headers_for_type(filename: &str, extension: &str) -> Option<HeadersAndCompression> {
@@ -180,10 +181,7 @@ fn headers_and_compression(
         Line::with_slice_value(CACHE_CONTROL, cache_control),
     ];
     HeadersAndCompression {
-        headers: default_headers
-            .cloned()
-            .chain(new_headers.into_iter())
-            .collect(),
+        headers: default_headers.cloned().chain(new_headers).collect(),
         compressible,
     }
 }
@@ -197,5 +195,8 @@ impl HeaderSelector for DefaultHeaderSelector {
         extension: &str,
     ) -> Option<HeadersAndCompression> {
         headers_for_type(filename, extension)
+    }
+    fn error_headers(&self) -> &'static [Line] {
+        default_error_headers()
     }
 }

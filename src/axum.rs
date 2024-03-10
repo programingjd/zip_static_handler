@@ -57,8 +57,7 @@ impl Request<AxumResponse> for RequestAdapter {
     ) -> AxumResponse {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let mut map = HeaderMap::new();
-        headers.for_each(|ref line| {
-            let line = line.as_ref();
+        headers.for_each(|line| {
             if let Ok(name) = HeaderName::from_bytes(line.key) {
                 if let Ok(value) = HeaderValue::from_bytes(line.value.as_ref()) {
                     map.append(name, value);

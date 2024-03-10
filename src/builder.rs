@@ -282,6 +282,9 @@ impl<
                 }
             }
         }
-        Ok(Handler { files: routes })
+        Ok(Handler {
+            files: routes,
+            error_headers: header_selector.error_headers(),
+        })
     }
 }

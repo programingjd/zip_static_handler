@@ -39,8 +39,7 @@ impl Request<HttpResponse<BoxBody>> for RequestAdapter {
     ) -> HttpResponse<BoxBody> {
         let code: u16 = code.into();
         let mut builder = HttpResponse::build(actix_web::http::StatusCode::from_u16(code).unwrap());
-        headers.for_each(|ref line| {
-            let line = line.as_ref();
+        headers.for_each(|line| {
             builder.append_header((line.key, line.value.as_ref()));
         });
         let body = body.map(Self::full).unwrap_or_else(Self::empty);

@@ -1,9 +1,9 @@
 use http_body_util::combinators::BoxBody;
-use http_body_util::{BodyExt, Empty};
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
+use lazy_static::lazy_static;
 use reqwest::Client;
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -12,6 +12,10 @@ use tokio::spawn;
 use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::{Handler, HeaderSelector, HeadersAndCompression};
 use zip_static_handler::http::headers::{Line, ALLOW, CACHE_CONTROL, CONTENT_TYPE};
+
+lazy_static! {
+    static ref DEFAULT_HEADERS: Vec<Line> = vec![Line::with_array_ref_value(ALLOW, b"GET, HEAD")];
+}
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {
     let response = Client::default().get(url).send().await?;
@@ -55,10 +59,14 @@ impl HeaderSelector for HSelector {
             _ => None,
         }
     }
+
+    fn error_headers(&self) -> &'static [Line] {
+        default_headers()
+    }
 }
 
-fn default_headers() -> Vec<Line> {
-    vec![Line::with_array_ref_value(ALLOW, b"GET, HEAD")]
+fn default_headers() -> &'static [Line] {
+    DEFAULT_HEADERS.as_slice()
 }
 
 fn headers_and_compression(
@@ -66,7 +74,7 @@ fn headers_and_compression(
     cache_control: &'static [u8],
     compressible: bool,
 ) -> HeadersAndCompression {
-    let mut headers = default_headers();
+    let mut headers = default_headers().to_vec();
     headers.push(Line::with_slice_value(CONTENT_TYPE, content_type));
     headers.push(Line::with_slice_value(CACHE_CONTROL, cache_control));
     HeadersAndCompression {
@@ -111,10 +119,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await;
         });
     }
-}
-
-fn empty() -> BoxBody<Bytes, hyper::Error> {
-    Empty::<Bytes>::new()
-        .map_err(|never| match never {})
-        .boxed()
 }
