@@ -22,7 +22,7 @@ async fn main() {
             .try_build()
             .expect("failed to parse zip"),
     );
-    let listener = TcpListener::bind(("0.0.0.0", 8080u16))
+    let listener = TcpListener::bind(("127.0.0.1", 8080u16))
         .await
         .expect("failed to bind");
     tcp_accept_loop(listener, handler).await;

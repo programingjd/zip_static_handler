@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "main",
     ))
     .await?;
-    let listener = TcpListener::bind(("0.0.0.0", 8080u16)).await?;
+    let listener = TcpListener::bind(("127.0.0.1", 8080u16)).await?;
     let state = Arc::new(
         Handler::builder()
             .with_zip_prefix("about.programingjd.me-main/")

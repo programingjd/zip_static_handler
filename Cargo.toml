@@ -64,7 +64,7 @@ features = []
 
 [dependencies.actix-web]
 optional = true
-version = "4.4"
+version = "4.5"
 default-features = false
 features = []
 
@@ -87,8 +87,8 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-#default = []
-default = ["hyper", "axum", "actix", "rocket", "min_http11"]
+default = []
+#default = ["hyper", "axum", "actix", "rocket", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]

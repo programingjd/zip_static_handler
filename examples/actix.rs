@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .app_data(Data::new(state.clone()))
             .default_service(web::route().to(static_handler))
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("127.0.0.1", 8080))?
     .run()
     .await?)
 }

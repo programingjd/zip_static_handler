@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let get = Route::new(Get, "/<path..>", HandlerAdapter);
     let rocket = rocket::build()
         .configure(Config {
-            address: [0, 0, 0, 0].into(),
+            address: [127, 0, 0, 1].into(),
             port: 8080,
             ..Config::default()
         })

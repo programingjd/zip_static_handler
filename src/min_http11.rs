@@ -144,7 +144,7 @@ async fn write_headers<T: AsyncWrite + Unpin>(
         writer.write_all(b"connection: close\r\n\r\n").await.ok()
     } else {
         writer
-            .write_all(b"connection: keep-alive\r\nkeep-alive: 60")
+            .write_all(b"connection: keep-alive\r\nkeep-alive: 60\r\n\r\n")
             .await
             .ok()
     }
