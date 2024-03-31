@@ -62,13 +62,33 @@ async fn request_loop(
     let mut writer = BufWriter::new(&mut writer);
     let mut buffer1 = vec![];
     let mut buffer2 = vec![];
-    loop {
-        if let Ok((method, path)) = parser.parse_request_line(&mut reader, &mut buffer1).await {
-            match path {
-                b"/healthcheck" => {
-                    if handle_healthcheck(
-                        handler.as_ref(),
+    while let Ok((method, path)) = parser.parse_request_line(&mut reader, &mut buffer1).await {
+        match path {
+            b"/healthcheck" => {
+                if handle_healthcheck(
+                    handler.as_ref(),
+                    &method,
+                    &parser,
+                    &mut reader,
+                    &mut writer,
+                    &mut buffer2,
+                )
+                .await
+                .is_some()
+                {
+                    if writer.flush().await.is_err() {
+                        break;
+                    }
+                } else {
+                    let _ = writer.flush().await;
+                    break;
+                }
+            }
+            _ => {
+                if handler
+                    .handle_path(
                         &method,
+                        path,
                         &parser,
                         &mut reader,
                         &mut writer,
@@ -76,39 +96,15 @@ async fn request_loop(
                     )
                     .await
                     .is_some()
-                    {
-                        if writer.flush().await.is_err() {
-                            break;
-                        }
-                    } else {
-                        let _ = writer.flush().await;
+                {
+                    if writer.flush().await.is_err() {
                         break;
                     }
-                }
-                _ => {
-                    if handler
-                        .handle_path(
-                            &method,
-                            path,
-                            &parser,
-                            &mut reader,
-                            &mut writer,
-                            &mut buffer2,
-                        )
-                        .await
-                        .is_some()
-                    {
-                        if writer.flush().await.is_err() {
-                            break;
-                        }
-                    } else {
-                        let _ = writer.flush().await;
-                        break;
-                    }
+                } else {
+                    let _ = writer.flush().await;
+                    break;
                 }
             }
-        } else {
-            break;
         }
     }
 }
