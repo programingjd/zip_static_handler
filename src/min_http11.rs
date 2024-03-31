@@ -159,7 +159,7 @@ impl Handler {
             .await
     }
 
-    async fn write_headers<T: AsyncWrite + Unpin>(
+    pub async fn write_headers<T: AsyncWrite + Unpin>(
         &self,
         writer: &mut T,
         headers: impl Iterator<Item = &Line>,
