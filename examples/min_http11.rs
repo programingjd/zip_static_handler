@@ -4,8 +4,12 @@ use min_http11_parser::parser::Parser;
 use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::io::{split, AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter};
+use tokio::io::{
+    copy, sink, split, AsyncBufRead, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
+    BufWriter,
+};
 use tokio::net::TcpListener;
+use tokio::time::timeout;
 use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::Handler;
 use zip_static_handler::http::response::StatusCode;
@@ -51,6 +55,7 @@ async fn tcp_accept_loop(listener: TcpListener, handler: Arc<Handler>) {
 
 // Keep-alive header returns 60 (not configurable), and we add 5s of leeway.
 pub const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(65);
+pub const MAX_REQUEST_SIZE: u64 = 16_384;
 
 async fn request_loop(
     mut reader: (impl AsyncRead + Unpin + Sized),
@@ -102,6 +107,8 @@ async fn request_loop(
                     }
                 } else {
                     let _ = writer.flush().await;
+                    let _ =
+                        timeout(Duration::from_millis(200), copy(&mut reader, &mut sink())).await;
                     break;
                 }
             }
@@ -122,7 +129,6 @@ async fn handle_healthcheck<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
             .write_status_line(writer, StatusCode::MethodNotAllowed)
             .await?;
         handler.write_error_headers(writer, false).await?;
-        let _ = writer.flush().await;
         None
     } else {
         match parser.parse_headers(reader, buffer).await {
@@ -149,6 +155,17 @@ async fn handle_healthcheck<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
             }
         }
     }
+}
+
+async fn handle_request_too_large<W: AsyncWrite + Unpin>(
+    handler: &Handler,
+    writer: &mut W,
+) -> Option<()> {
+    handler
+        .write_status_line(writer, StatusCode::RequestTooLarge)
+        .await?;
+    handler.write_error_headers(writer, false).await?;
+    None
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {

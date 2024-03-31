@@ -4,9 +4,7 @@ use crate::http::response::StatusCode;
 use min_http11_parser::error::Error;
 use min_http11_parser::method::Method;
 use min_http11_parser::parser::Parser;
-use std::str::from_utf8;
-use tokio::io::{copy, sink, AsyncBufRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tokio::join;
+use tokio::io::{AsyncBufRead, AsyncWrite, AsyncWriteExt};
 
 impl Handler {
     pub async fn read_request_line<'a, R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
@@ -77,25 +75,10 @@ impl Handler {
         };
         if let Some(value) = known_headers.content_length {
             if value != b"0" {
-                let content_length = known_headers
-                    .content_length
-                    .and_then(|it| from_utf8(it).ok())
-                    .and_then(|it| it.parse::<usize>().ok())?;
-                let (r, w) = join!(
-                    async {
-                        copy(&mut reader.take(content_length as u64), &mut sink())
-                            .await
-                            .ok()
-                    },
-                    async {
-                        self.write_status_line(writer, StatusCode::BadRequest)
-                            .await?;
-                        self.write_error_headers(writer, false).await?;
-                        Some(())
-                    }
-                );
-                r?;
-                w?;
+                self.write_status_line(writer, StatusCode::BadRequest)
+                    .await?;
+                self.write_error_headers(writer, true).await?;
+                return None;
             }
         }
         let is_get = match method {
