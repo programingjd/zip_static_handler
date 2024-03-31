@@ -5,8 +5,7 @@ use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{
-    copy, sink, split, AsyncBufRead, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
-    BufWriter,
+    copy, sink, split, AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter,
 };
 use tokio::net::TcpListener;
 use tokio::time::timeout;
@@ -155,17 +154,6 @@ async fn handle_healthcheck<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
             }
         }
     }
-}
-
-async fn handle_request_too_large<W: AsyncWrite + Unpin>(
-    handler: &Handler,
-    writer: &mut W,
-) -> Option<()> {
-    handler
-        .write_status_line(writer, StatusCode::RequestTooLarge)
-        .await?;
-    handler.write_error_headers(writer, false).await?;
-    None
 }
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {

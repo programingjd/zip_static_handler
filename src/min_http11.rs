@@ -140,6 +140,8 @@ impl Handler {
                 StatusCode::TemporaryRedirect => b"HTTP/1.1 307 Temporary Redirect\r\n",
                 StatusCode::PermanentRedirect => b"HTTP/1.1 308 Permanent Redirect\r\n",
                 StatusCode::BadRequest => b"HTTP/1.1 400 Bad Request\r\n",
+                StatusCode::Unauthorized => b"HTTP/1.1 401 Unauthorized\r\n",
+                StatusCode::Forbidden => b"HTTP/1.1 403 Forbidden\r\n",
                 StatusCode::NotFound => b"HTTP/1.1 404 Not Found\r\n",
                 StatusCode::MethodNotAllowed => b"HTTP/1.1 405 Method Not Allowed\r\n",
                 StatusCode::PreconditionFailed => b"HTTP/1.1 412 Precondition Failed\r\n",

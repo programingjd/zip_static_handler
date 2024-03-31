@@ -40,6 +40,7 @@ pub mod headers {
     pub const LOCATION: &[u8] = b"location";
     pub const HSTS: &[u8] = b"strict-transport-security";
     pub const SERVICE_WORKER_ALLOWED: &[u8] = b"service-worker-allowed";
+    pub const WWW_AUTHENTICATE: &[u8] = b"www-authenticate";
     pub const X_CONTENT_TYPE_OPTIONS: &[u8] = b"x-content-type-options";
     pub const X_FRAME_OPTIONS: &[u8] = b"x-frame-options";
     pub const X_XSS_PROTECTION: &[u8] = b"x-xss-protection";
@@ -119,6 +120,8 @@ pub mod response {
         TemporaryRedirect,
         PermanentRedirect,
         BadRequest,
+        Unauthorized,
+        Forbidden,
         NotFound,
         MethodNotAllowed,
         PreconditionFailed,
@@ -134,6 +137,8 @@ pub mod response {
                 StatusCode::TemporaryRedirect => 307,
                 StatusCode::PermanentRedirect => 308,
                 StatusCode::BadRequest => 400,
+                StatusCode::Unauthorized => 401,
+                StatusCode::Forbidden => 403,
                 StatusCode::NotFound => 404,
                 StatusCode::MethodNotAllowed => 405,
                 StatusCode::PreconditionFailed => 412,
