@@ -110,6 +110,16 @@ You can choose the implementation of HTTP request and response that you need by 
 
   example: [rocket.rs](examples/rocket.rs)
 
+
+- xitca
+
+  example: [xitca.rs](examples/xitca.rs)
+
+
+- min_http11
+
+  example: [min_http11.rs](examples/min_http11.rs)
+
 ## Examples
 
 There are examples for the different http implementations that can be enabled

@@ -19,6 +19,9 @@ pub mod actix;
 #[cfg(feature = "rocket")]
 pub mod rocket;
 
+#[cfg(feature = "xitca")]
+pub mod xitca;
+
 #[cfg(feature = "min_http11_parser")]
 pub mod min_http11;
 

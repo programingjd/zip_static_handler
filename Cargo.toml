@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -74,6 +74,12 @@ version = "0.5"
 default-features = false
 features = []
 
+[dependencies.xitca-web]
+optional = true
+version = "0.4"
+default-features = false
+features = ["http1", "http-body"]
+
 [dependencies.tokio]
 optional = true
 version = "1.36"
@@ -82,17 +88,18 @@ features = ["io-util"]
 
 [dependencies.min_http11_parser]
 optional = true
-version = "0.0"
+version = "0.2"
 default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
-#default = ["hyper", "axum", "actix", "rocket", "min_http11"]
+#default = []
+default = ["hyper", "axum", "actix", "rocket", "xitca", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
 rocket = ["dep:rocket"]
+xitca = ["dep:xitca-web"]
 min_http11 = ["min_http11_parser/_minimal", "dep:tokio"]
 
 #http client for downloading zip from github
@@ -156,6 +163,10 @@ required-features = ["actix"]
 [[example]]
 name = "rocket"
 required-features = ["rocket"]
+
+[[example]]
+name = "xitca"
+required-features = ["xitca"]
 
 [[example]]
 name = "auto_update"
