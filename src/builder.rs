@@ -278,7 +278,7 @@ impl<
                     );
                     routes.insert(format!("{path_prefix}{no_trailing_slash}"), value);
                 } else {
-                    routes.insert(path, value);
+                    routes.insert(format!("{path_prefix}{path}"), value);
                 }
             }
         }
