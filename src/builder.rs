@@ -5,7 +5,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::marker::PhantomData;
-use tracing::trace;
+use tracing::{info, trace};
 use zip_structs::zip_central_directory::ZipCDEntry;
 use zip_structs::zip_eocd::ZipEOCD;
 
@@ -271,14 +271,18 @@ impl<
                 diff,
             )? {
                 if path.ends_with('/') && path.len() > 1 {
-                    let no_trailing_slash = &path[..path.len() - 1];
+                    let path_without_trailing_slash = &path[..path.len() - 1];
                     routes.insert(
                         format!("{path_prefix}{path}"),
-                        crate::handler::redirect_entry(no_trailing_slash),
+                        crate::handler::redirect_entry(
+                            format!("{path_prefix}{path_without_trailing_slash}").as_str(),
+                        ),
                     );
-                    routes.insert(format!("{path_prefix}{no_trailing_slash}"), value);
+                    routes.insert(format!("{path_prefix}{path_without_trailing_slash}"), value);
+                    info!("{}", format!("{path_prefix}{path_without_trailing_slash}"));
                 } else {
                     routes.insert(format!("{path_prefix}{path}"), value);
+                    info!("{}", format!("{path_prefix}{path}"));
                 }
             }
         }
