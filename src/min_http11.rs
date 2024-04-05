@@ -92,7 +92,7 @@ impl Handler {
             }
         };
         let path = String::from_utf8_lossy(path);
-        if let Some(file) = self.files.get(path.as_ref()) {
+        if let Some(file) = self.paths.get(path.as_ref()) {
             let headers = &file.headers;
             if file.etag.is_some() {
                 let etag = file.etag.as_ref().map(|it| it.as_bytes());

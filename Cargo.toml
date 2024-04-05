@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.4.6"
+version = "0.5.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -24,7 +24,7 @@ default-features = false
 features = []
 
 [dependencies.brotli]
-version = "3.5.0"
+version = "4.0"
 default-features = false
 features = ["std"]
 
@@ -82,7 +82,7 @@ features = ["http1", "http-body"]
 
 [dependencies.tokio]
 optional = true
-version = "1.36"
+version = "1.37"
 default-features = false
 features = ["io-util"]
 
@@ -108,7 +108,7 @@ version = "0.12"
 features = ["blocking", "rustls-tls"]
 
 [dev-dependencies.tokio]
-version = "1.36"
+version = "1.37"
 default-features = false
 features = ["full"]
 

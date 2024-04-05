@@ -157,11 +157,24 @@ impl<
             _a: PhantomData,
             _b: PhantomData,
             zip_prefix: self.zip_prefix,
-            path_prefix: prefix.into(),
+            path_prefix: sanitize_prefix(prefix.into()),
             header_selector: self.header_selector,
             diff: self.diff,
             bytes: self.bytes,
         }
+    }
+}
+
+fn sanitize_prefix(prefix: String) -> String {
+    let prefix = if prefix.starts_with('/') {
+        prefix
+    } else {
+        format!("/{prefix}")
+    };
+    if prefix.ends_with('/') {
+        prefix.strip_suffix('/').unwrap().to_string()
+    } else {
+        prefix
     }
 }
 
@@ -270,7 +283,8 @@ impl<
                 header_selector,
                 diff,
             )? {
-                if path.ends_with('/') && path.len() > 1 {
+                // redir / to path without slash unless the path is just "/" and there's no prefix
+                if path.ends_with('/') && (path.len() > 1 || !path_prefix.is_empty()) {
                     let path_without_trailing_slash = &path[..path.len() - 1];
                     routes.insert(
                         format!("{path_prefix}{path}"),
@@ -285,7 +299,7 @@ impl<
             }
         }
         Ok(Handler {
-            files: routes,
+            paths: routes,
             error_headers: header_selector.error_headers(),
         })
     }

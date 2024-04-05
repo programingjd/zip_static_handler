@@ -15,7 +15,7 @@ use zip_structs::zip_central_directory::ZipCDEntry;
 use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
 pub struct Handler {
-    pub(crate) files: HashMap<String, Entry>,
+    pub(crate) paths: HashMap<String, Entry>,
     pub(crate) error_headers: &'static [Line],
 }
 
@@ -42,7 +42,7 @@ impl Handler {
             }
         };
         let path = String::from_utf8_lossy(request.path());
-        if let Some(file) = self.files.get(path.as_ref()) {
+        if let Some(file) = self.paths.get(path.as_ref()) {
             let headers = &file.headers;
             if file.etag.is_some() {
                 let etag = file.etag.as_ref().map(|it| it.as_bytes());
@@ -163,7 +163,7 @@ pub(crate) fn build_entry(
                     Cow::Borrowed(it) => it.to_vec(),
                 }
             } else if let Some(entry) = previous.and_then(|it| {
-                it.files
+                it.paths
                     .get(&compressed_name)
                     .filter(|&entry| entry.etag == etag)
             }) {
@@ -233,7 +233,7 @@ mod tests {
             .try_build();
         assert!(handler.is_ok());
         let handler = handler.unwrap();
-        let favicon = handler.files.get("/favicon.png");
+        let favicon = handler.paths.get("/favicon.png");
         assert!(favicon.is_some());
         let favicon = favicon.unwrap();
         assert_eq!(
@@ -247,8 +247,48 @@ mod tests {
                 }),
             Some(b"image/png".as_slice())
         );
-        assert!(handler.files.get("/.idea/modules.xml").is_none());
-        assert!(handler.files.get("/").is_some());
-        assert!(handler.files.get("/index.html").is_none());
+        assert!(handler.paths.get("/.idea/modules.xml").is_none());
+        assert!(handler.paths.get("/").is_some());
+        assert!(handler.paths.get("/").unwrap().etag.is_some());
+        assert!(handler.paths.get("/index.html").is_none());
+    }
+
+    #[test]
+    fn from_github_with_prefix() {
+        let zip = download(&zip_download_commit_url(
+            "programingjd",
+            "about.programingjd.me",
+            "b9ea1260114c63a9d5761fe214b85299cc617c5c",
+        ));
+        let handler = Handler::builder()
+            .with_zip_prefix("about.programingjd.me-b9ea1260114c63a9d5761fe214b85299cc617c5c/")
+            .with_zip(zip)
+            .with_root_prefix("test/")
+            .try_build();
+        assert!(handler.is_ok());
+        let handler = handler.unwrap();
+        let favicon = handler.paths.get("/test/favicon.png");
+        assert!(favicon.is_some());
+        let favicon = favicon.unwrap();
+        assert_eq!(
+            favicon
+                .headers
+                .iter()
+                .find_map(|ref line| if line.key == CONTENT_TYPE {
+                    Some(line.value.as_ref())
+                } else {
+                    None
+                }),
+            Some(b"image/png".as_slice())
+        );
+        assert!(handler.paths.get("/.idea/modules.xml").is_none());
+        assert!(handler.paths.get("/").is_none());
+        assert!(handler.paths.get("/index.html").is_none());
+        assert!(handler.paths.get("/test/.idea/modules.xml").is_none());
+        assert!(handler.paths.get("/test/index.html").is_none());
+        assert!(handler.paths.get("/test/").is_some());
+        assert!(handler.paths.get("/test/").unwrap().etag.is_none());
+        assert!(handler.paths.get("/test").is_some());
+        assert!(handler.paths.get("/test").unwrap().etag.is_some());
     }
 }
