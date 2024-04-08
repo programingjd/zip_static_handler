@@ -6,7 +6,7 @@ use crate::http::headers::{
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref DEFAULT_HEADERS: Vec<Line> = {
+    pub static ref DEFAULT_HEADERS: Vec<Line> = {
         let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
             (ALLOW, b"GET, HEAD".as_slice()).into(),
             (X_CONTENT_TYPE_OPTIONS, b"nosniff".as_slice()).into(),
@@ -20,7 +20,7 @@ lazy_static! {
         ];
         headers
     };
-    static ref ERROR_HEADERS: Vec<Line> = {
+    pub static ref ERROR_HEADERS: Vec<Line> = {
         let headers/*: Vec<(&'static [u8], &'static [u8])>*/ = vec![
             (ALLOW, b"GET, HEAD".as_slice()).into(),
             (CONTENT_LENGTH, b"0".as_slice()).into(),

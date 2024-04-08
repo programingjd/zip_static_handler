@@ -5,7 +5,7 @@ pub mod github;
 pub mod handler;
 pub mod http;
 mod path;
-mod types;
+pub mod types;
 
 #[cfg(feature = "hyper")]
 pub mod hyper;

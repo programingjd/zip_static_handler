@@ -1,10 +1,12 @@
-use crate::handler::Handler;
+use crate::handler::{Entry, Handler};
 use crate::http::headers::Line;
 use crate::http::response::StatusCode;
 use min_http11_parser::error::Error;
 use min_http11_parser::method::Method;
 use min_http11_parser::parser::Parser;
 use tokio::io::{AsyncBufRead, AsyncWrite, AsyncWriteExt};
+
+pub struct Accepted<'a>(&'a Entry);
 
 impl Handler {
     pub async fn read_request_line<'a, R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
@@ -19,18 +21,14 @@ impl Handler {
             Err(Error::UnsupportedVersion(_)) => None,
             Err(Error::UnexpectedEndOfFile) => None,
             Err(Error::RequestTooLarge) => {
-                self.write_status_line(writer, StatusCode::RequestTooLarge)
-                    .await?;
-                self.write_headers(writer, self.error_headers.iter(), true)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::RequestTooLarge).await?;
+                Self::write_headers(writer, self.error_headers.iter(), true).await?;
                 None
             }
             Err(Error::UnknownMethod(_)) => None,
             Err(Error::BadRequest) => {
-                self.write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
-                self.write_headers(writer, self.error_headers.iter(), true)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                Self::write_headers(writer, self.error_headers.iter(), true).await?;
                 None
             }
             Err(_) => unimplemented!(),
@@ -38,11 +36,14 @@ impl Handler {
         }
     }
 
-    pub async fn handle_path<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
-        &self,
+    pub fn accept(&self, path: &str) -> Option<Accepted> {
+        self.paths.get(path).map(|it| Accepted(it))
+    }
+
+    pub async fn handle_not_found<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
         method: &Method,
-        path: &[u8],
         parser: &Parser,
+        headers: impl Iterator<Item = &Line>,
         reader: &mut R,
         writer: &mut W,
         buffer: &mut Vec<u8>,
@@ -50,8 +51,52 @@ impl Handler {
         match method {
             Method::Head | Method::Get => {}
             _ => {
-                self.write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                Self::write_headers(writer, headers, true).await?;
+                return None;
+            }
+        }
+        let known_headers = match parser.parse_headers(reader, buffer).await {
+            Err(Error::ReadTimeout) => return None,
+            Err(Error::RequestTooLarge) => {
+                Self::write_status_line(writer, StatusCode::RequestTooLarge).await?;
+                Self::write_headers(writer, headers, true).await?;
+                return None;
+            }
+            Err(Error::BadRequest) => {
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                Self::write_headers(writer, headers, true).await?;
+                return None;
+            }
+            Err(_) => unimplemented!(),
+            Ok((known_headers, _)) => known_headers,
+        };
+        if let Some(value) = known_headers.content_length {
+            if value != b"0" {
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                Self::write_headers(writer, headers, true).await?;
+                return None;
+            }
+        }
+        Self::write_status_line(writer, StatusCode::NotFound).await?;
+        Self::write_headers(writer, headers, false).await?;
+        Some(())
+    }
+
+    pub async fn handle_path<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
+        &self,
+        method: &Method,
+        accepted: Accepted<'_>,
+        parser: &Parser,
+        reader: &mut R,
+        writer: &mut W,
+        buffer: &mut Vec<u8>,
+    ) -> Option<()> {
+        let entry = accepted.0;
+        match method {
+            Method::Head | Method::Get => {}
+            _ => {
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
@@ -59,14 +104,12 @@ impl Handler {
         let known_headers = match parser.parse_headers(reader, buffer).await {
             Err(Error::ReadTimeout) => return None,
             Err(Error::RequestTooLarge) => {
-                self.write_status_line(writer, StatusCode::RequestTooLarge)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::RequestTooLarge).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
             Err(Error::BadRequest) => {
-                self.write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
@@ -75,8 +118,7 @@ impl Handler {
         };
         if let Some(value) = known_headers.content_length {
             if value != b"0" {
-                self.write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
@@ -85,51 +127,39 @@ impl Handler {
             Method::Get => true,
             Method::Head => false,
             _ => {
-                self.write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
         };
-        let path = String::from_utf8_lossy(path);
-        if let Some(file) = self.paths.get(path.as_ref()) {
-            let headers = &file.headers;
-            if file.etag.is_some() {
-                let etag = file.etag.as_ref().map(|it| it.as_bytes());
-                let none_match = known_headers.if_none_match;
-                let if_match = known_headers.if_match;
-                if none_match.is_some() && none_match == etag {
-                    self.write_status_line(writer, StatusCode::NotModified)
-                        .await?;
-                    self.write_headers(writer, headers.iter(), false).await?;
-                } else if if_match.is_some() && if_match != etag {
-                    self.write_status_line(writer, StatusCode::PreconditionFailed)
-                        .await?;
-                    self.write_headers(writer, headers.iter(), false).await?;
-                } else {
-                    self.write_status_line(writer, StatusCode::OK).await?;
-                    self.write_headers(writer, headers.iter(), false).await?;
-                    if is_get {
-                        if let Some(ref body) = file.content {
-                            self.write_body(writer, body).await?;
-                        }
+        let headers = &entry.headers;
+        if entry.etag.is_some() {
+            let etag = entry.etag.as_ref().map(|it| it.as_bytes());
+            let none_match = known_headers.if_none_match;
+            let if_match = known_headers.if_match;
+            if none_match.is_some() && none_match == etag {
+                Self::write_status_line(writer, StatusCode::NotModified).await?;
+                Self::write_headers(writer, headers.iter(), false).await?;
+            } else if if_match.is_some() && if_match != etag {
+                Self::write_status_line(writer, StatusCode::PreconditionFailed).await?;
+                Self::write_headers(writer, headers.iter(), false).await?;
+            } else {
+                Self::write_status_line(writer, StatusCode::OK).await?;
+                Self::write_headers(writer, headers.iter(), false).await?;
+                if is_get {
+                    if let Some(ref body) = entry.content {
+                        Self::write_body(writer, body).await?;
                     }
                 }
-            } else {
-                self.write_status_line(writer, StatusCode::PermanentRedirect)
-                    .await?;
-                self.write_headers(writer, headers.iter(), false).await?;
             }
         } else {
-            self.write_status_line(writer, StatusCode::NotFound).await?;
-            self.write_headers(writer, self.error_headers.iter(), false)
-                .await?;
+            Self::write_status_line(writer, StatusCode::PermanentRedirect).await?;
+            Self::write_headers(writer, headers.iter(), false).await?;
         }
         Some(())
     }
 
     pub async fn write_status_line<T: AsyncWrite + Unpin>(
-        &self,
         writer: &mut T,
         code: StatusCode,
     ) -> Option<()> {
@@ -157,12 +187,10 @@ impl Handler {
         writer: &mut T,
         close: bool,
     ) -> Option<()> {
-        self.write_headers(writer, self.error_headers.iter(), close)
-            .await
+        Self::write_headers(writer, self.error_headers.iter(), close).await
     }
 
     pub async fn write_headers<T: AsyncWrite + Unpin>(
-        &self,
         writer: &mut T,
         headers: impl Iterator<Item = &Line>,
         close: bool,
@@ -184,7 +212,6 @@ impl Handler {
     }
 
     pub async fn write_body<T: AsyncWrite + Unpin>(
-        &self,
         writer: &mut T,
         body: impl AsRef<[u8]>,
     ) -> Option<()> {

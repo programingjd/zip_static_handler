@@ -12,6 +12,7 @@ use tokio::time::timeout;
 use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::Handler;
 use zip_static_handler::http::response::StatusCode;
+use zip_static_handler::types::DEFAULT_HEADERS;
 
 #[tokio::main]
 async fn main() {
@@ -69,16 +70,9 @@ async fn request_loop(
     while let Ok((method, path)) = parser.parse_request_line(&mut reader, &mut buffer1).await {
         match path {
             b"/healthcheck" => {
-                if handle_healthcheck(
-                    handler.as_ref(),
-                    &method,
-                    &parser,
-                    &mut reader,
-                    &mut writer,
-                    &mut buffer2,
-                )
-                .await
-                .is_some()
+                if handle_healthcheck(&method, &parser, &mut reader, &mut writer, &mut buffer2)
+                    .await
+                    .is_some()
                 {
                     if writer.flush().await.is_err() {
                         break;
@@ -89,17 +83,30 @@ async fn request_loop(
                 }
             }
             _ => {
-                if handler
-                    .handle_path(
+                let path = String::from_utf8_lossy(path);
+                if if let Some(entry) = handler.accept(path.as_ref()) {
+                    handler
+                        .handle_path(
+                            &method,
+                            entry,
+                            &parser,
+                            &mut reader,
+                            &mut writer,
+                            &mut buffer2,
+                        )
+                        .await
+                } else {
+                    Handler::handle_not_found(
                         &method,
-                        path,
                         &parser,
+                        DEFAULT_HEADERS.iter(),
                         &mut reader,
                         &mut writer,
                         &mut buffer2,
                     )
                     .await
-                    .is_some()
+                }
+                .is_some()
                 {
                     if writer.flush().await.is_err() {
                         break;
@@ -116,7 +123,6 @@ async fn request_loop(
 }
 
 async fn handle_healthcheck<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
-    handler: &Handler,
     method: &Method,
     parser: &Parser,
     reader: &mut R,
@@ -124,32 +130,26 @@ async fn handle_healthcheck<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
     buffer: &mut Vec<u8>,
 ) -> Option<()> {
     if *method != Method::Head {
-        handler
-            .write_status_line(writer, StatusCode::MethodNotAllowed)
-            .await?;
-        handler.write_error_headers(writer, false).await?;
+        Handler::write_status_line(writer, StatusCode::MethodNotAllowed).await?;
+        Handler::write_headers(writer, DEFAULT_HEADERS.iter(), true).await?;
         None
     } else {
         match parser.parse_headers(reader, buffer).await {
             Err(Error::ReadTimeout) => None,
             Err(Error::RequestTooLarge) => {
-                handler
-                    .write_status_line(writer, StatusCode::RequestTooLarge)
-                    .await?;
-                handler.write_error_headers(writer, true).await?;
+                Handler::write_status_line(writer, StatusCode::RequestTooLarge).await?;
+                Handler::write_headers(writer, DEFAULT_HEADERS.iter(), true).await?;
                 None
             }
             Err(Error::BadRequest) => {
-                handler
-                    .write_status_line(writer, StatusCode::BadRequest)
-                    .await?;
-                handler.write_error_headers(writer, true).await?;
+                Handler::write_status_line(writer, StatusCode::BadRequest).await?;
+                Handler::write_headers(writer, DEFAULT_HEADERS.iter(), true).await?;
                 None
             }
             Err(_) => unimplemented!(),
             Ok(_) => {
-                handler.write_status_line(writer, StatusCode::OK).await?;
-                handler.write_error_headers(writer, true).await?;
+                Handler::write_status_line(writer, StatusCode::OK).await?;
+                Handler::write_headers(writer, DEFAULT_HEADERS.iter(), true).await?;
                 Some(())
             }
         }
