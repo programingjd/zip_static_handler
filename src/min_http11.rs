@@ -37,7 +37,7 @@ impl Handler {
     }
 
     pub fn accept(&self, path: &str) -> Option<Accepted> {
-        self.paths.get(path).map(|it| Accepted(it))
+        self.paths.get(path).map(Accepted)
     }
 
     pub async fn handle_not_found<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
