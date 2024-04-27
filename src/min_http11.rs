@@ -1,5 +1,5 @@
 use crate::handler::{Entry, Handler};
-use crate::http::headers::Line;
+use crate::http::headers::{Line, LOCATION};
 use crate::http::response::StatusCode;
 use min_http11_parser::error::Error;
 use min_http11_parser::method::Method;
@@ -41,9 +41,9 @@ impl Handler {
     }
 
     pub async fn handle_not_found<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
+        &self,
         method: &Method,
         parser: &Parser,
-        headers: impl Iterator<Item = &Line>,
         reader: &mut R,
         writer: &mut W,
         buffer: &mut Vec<u8>,
@@ -52,7 +52,7 @@ impl Handler {
             Method::Head | Method::Get => {}
             _ => {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
-                Self::write_headers(writer, headers, true).await?;
+                self.write_error_headers(writer, true).await?;
                 return None;
             }
         }
@@ -60,12 +60,12 @@ impl Handler {
             Err(Error::ReadTimeout) => return None,
             Err(Error::RequestTooLarge) => {
                 Self::write_status_line(writer, StatusCode::RequestTooLarge).await?;
-                Self::write_headers(writer, headers, true).await?;
+                self.write_error_headers(writer, true).await?;
                 return None;
             }
             Err(Error::BadRequest) => {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
-                Self::write_headers(writer, headers, true).await?;
+                self.write_error_headers(writer, true).await?;
                 return None;
             }
             Err(_) => unimplemented!(),
@@ -74,12 +74,12 @@ impl Handler {
         if let Some(value) = known_headers.content_length {
             if value != b"0" {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
-                Self::write_headers(writer, headers, true).await?;
+                self.write_error_headers(writer, true).await?;
                 return None;
             }
         }
         Self::write_status_line(writer, StatusCode::NotFound).await?;
-        Self::write_headers(writer, headers, false).await?;
+        self.write_error_headers(writer, true).await?;
         Some(())
     }
 
@@ -143,14 +143,18 @@ impl Handler {
             } else if if_match.is_some() && if_match != etag {
                 Self::write_status_line(writer, StatusCode::PreconditionFailed).await?;
                 Self::write_headers(writer, headers.iter(), false).await?;
-            } else {
+            } else if let Some(ref body) = entry.content {
                 Self::write_status_line(writer, StatusCode::OK).await?;
                 Self::write_headers(writer, headers.iter(), false).await?;
                 if is_get {
-                    if let Some(ref body) = entry.content {
-                        Self::write_body(writer, body).await?;
-                    }
+                    Self::write_body(writer, body).await?;
                 }
+            } else if headers.iter().any(|it| it.key == LOCATION) {
+                Self::write_status_line(writer, StatusCode::TemporaryRedirect).await?;
+                Self::write_headers(writer, headers.iter(), false).await?;
+            } else {
+                Self::write_status_line(writer, StatusCode::NoContent).await?;
+                Self::write_headers(writer, headers.iter(), false).await?;
             }
         } else {
             Self::write_status_line(writer, StatusCode::PermanentRedirect).await?;
@@ -166,6 +170,7 @@ impl Handler {
         writer
             .write_all(match code {
                 StatusCode::OK => b"HTTP/1.1 200 OK\r\n",
+                StatusCode::NoContent => b"HTTP/1.1 204 No Content\r\n",
                 StatusCode::NotModified => b"HTTP/1.1 304 Not Modified\r\n",
                 StatusCode::TemporaryRedirect => b"HTTP/1.1 307 Temporary Redirect\r\n",
                 StatusCode::PermanentRedirect => b"HTTP/1.1 308 Permanent Redirect\r\n",

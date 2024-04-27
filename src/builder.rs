@@ -1,5 +1,6 @@
 use crate::errors::Result;
-use crate::handler::{Handler, HeaderSelector};
+use crate::handler::{Entry, Handler, HeaderSelector, HeadersAndCompression};
+use crate::http::headers::{Line, LOCATION};
 use crate::types::DefaultHeaderSelector;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -286,12 +287,18 @@ impl<
                 // redir / to path without slash unless the path is just "/" and there's no prefix
                 if path.ends_with('/') && (path.len() > 1 || !path_prefix.is_empty()) {
                     let path_without_trailing_slash = &path[..path.len() - 1];
-                    routes.insert(
-                        format!("{path_prefix}{path}"),
-                        crate::handler::redirect_entry(
-                            format!("{path_prefix}{path_without_trailing_slash}").as_str(),
-                        ),
-                    );
+                    if let Some(HeadersAndCompression { mut headers, .. }) =
+                        header_selector.headers_for_extension(path_without_trailing_slash, "308")
+                    {
+                        let location = format!("{path_prefix}{path_without_trailing_slash}");
+                        headers.push(Line::with_owned_value(LOCATION, location.into_bytes()));
+                        let entry = Entry {
+                            headers,
+                            content: None,
+                            etag: None,
+                        };
+                        routes.insert(format!("{path_prefix}{path}"), entry);
+                    }
                     routes.insert(format!("{path_prefix}{path_without_trailing_slash}"), value);
                 } else {
                     routes.insert(format!("{path_prefix}{path}"), value);

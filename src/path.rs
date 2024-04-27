@@ -7,6 +7,8 @@ pub(crate) fn path(zip_prefix: &str, name: &str) -> String {
         } else {
             name.len() - 5
         }
+    } else if name.ends_with(".307") || name.ends_with(".308") {
+        name.len() - 4
     } else {
         name.len()
     };

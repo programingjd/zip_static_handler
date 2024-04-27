@@ -96,15 +96,9 @@ async fn request_loop(
                         )
                         .await
                 } else {
-                    Handler::handle_not_found(
-                        &method,
-                        &parser,
-                        DEFAULT_HEADERS.iter(),
-                        &mut reader,
-                        &mut writer,
-                        &mut buffer2,
-                    )
-                    .await
+                    handler
+                        .handle_not_found(&method, &parser, &mut reader, &mut writer, &mut buffer2)
+                        .await
                 }
                 .is_some()
                 {

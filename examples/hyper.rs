@@ -34,28 +34,38 @@ impl HeaderSelector for HSelector {
         extension: &str,
     ) -> Option<HeadersAndCompression> {
         match extension {
-            "html" => Some(headers_and_compression(b"text/html", b"no-cache", true)),
-            "css" => Some(headers_and_compression(b"text/css", b"no-cache", true)),
+            "html" => Some(headers_and_compression(
+                Some(b"text/html"),
+                Some(b"no-cache"),
+                true,
+            )),
+            "css" => Some(headers_and_compression(
+                Some(b"text/css"),
+                Some(b"no-cache"),
+                true,
+            )),
             "json" => Some(headers_and_compression(
-                b"application/json",
-                b"no-cache",
+                Some(b"application/json"),
+                Some(b"no-cache"),
                 true,
             )),
             "ico" => Some(headers_and_compression(
-                b"image/x-icon",
-                b"max-age=604800,immutable",
+                Some(b"image/x-icon"),
+                Some(b"max-age=604800,immutable"),
                 true,
             )),
             "jpg" => Some(headers_and_compression(
-                b"image/jpg",
-                b"max-age=604800,immutable",
+                Some(b"image/jpg"),
+                Some(b"max-age=604800,immutable"),
                 true,
             )),
             "webp" => Some(headers_and_compression(
-                b"image/webp",
-                b"max-age=604800,immutable",
+                Some(b"image/webp"),
+                Some(b"max-age=604800,immutable"),
                 true,
             )),
+            "307" => Some(headers_and_compression(None, Some(b"no-cache"), false)),
+            "308" => Some(headers_and_compression(None, None, false)),
             _ => None,
         }
     }
@@ -70,16 +80,21 @@ fn default_headers() -> &'static [Line] {
 }
 
 fn headers_and_compression(
-    content_type: &'static [u8],
-    cache_control: &'static [u8],
+    content_type: Option<&'static [u8]>,
+    cache_control: Option<&'static [u8]>,
     compressible: bool,
 ) -> HeadersAndCompression {
     let mut headers = default_headers().to_vec();
-    headers.push(Line::with_slice_value(CONTENT_TYPE, content_type));
-    headers.push(Line::with_slice_value(CACHE_CONTROL, cache_control));
+    if let Some(content_type) = content_type {
+        headers.push(Line::with_slice_value(CONTENT_TYPE, content_type));
+    }
+    if let Some(cache_control) = cache_control {
+        headers.push(Line::with_slice_value(CACHE_CONTROL, cache_control));
+    }
     HeadersAndCompression {
         headers,
         compressible,
+        redirection: content_type.is_none(),
     }
 }
 

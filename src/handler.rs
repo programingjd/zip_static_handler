@@ -1,7 +1,7 @@
 use crate::compression::{brotli, decompress};
 use crate::errors::Result;
 use crate::http::headers::{
-    Line, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
+    Line, CACHE_CONTROL, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
 };
 use crate::http::method;
 use crate::http::request::Request;
@@ -56,20 +56,16 @@ impl Handler {
                         headers.iter(),
                         None::<&[u8]>,
                     )
-                } else {
+                } else if let Some(ref body) = file.content {
                     request.response(
                         StatusCode::OK,
                         headers.iter(),
-                        if is_get {
-                            if let Some(ref body) = file.content {
-                                Some(body.as_slice())
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        },
+                        if is_get { Some(body.as_slice()) } else { None },
                     )
+                } else if headers.iter().any(|it| it.key == LOCATION) {
+                    request.response(StatusCode::TemporaryRedirect, headers.iter(), None)
+                } else {
+                    request.response(StatusCode::NoContent, headers.iter(), None)
                 }
             } else {
                 request.response(StatusCode::PermanentRedirect, headers.iter(), None::<&[u8]>)
@@ -102,15 +98,7 @@ pub trait HeaderSelector {
 pub struct HeadersAndCompression {
     pub headers: Vec<Line>,
     pub compressible: bool,
-}
-
-pub(crate) fn redirect_entry(path: &str) -> Entry {
-    let headers = vec![Line::with_owned_value(LOCATION, path.as_bytes().to_vec())];
-    Entry {
-        headers,
-        content: None,
-        etag: None,
-    }
+    pub redirection: bool,
 }
 
 pub(crate) fn build_entry(
@@ -140,16 +128,21 @@ pub(crate) fn build_entry(
     if let Some(HeadersAndCompression {
         mut headers,
         compressible,
+        redirection,
     }) = header_selector.headers_for_extension(filename, extension)
     {
         let path = path(zip_prefix, &name);
         info!(path = path);
         let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
         let crc32 = zip_file_header.crc32;
-        let etag = format!("{:x}", crc32);
-        trace!(etag = etag.as_str());
-        headers.push(Line::with_owned_value(ETAG, etag.as_bytes().to_vec()));
-        let etag = Some(etag);
+        let etag = if headers.iter().any(|it| it.key == CACHE_CONTROL) {
+            let etag = format!("{:x}", crc32);
+            trace!(etag = etag.as_str());
+            headers.push(Line::with_owned_value(ETAG, etag.as_bytes().to_vec()));
+            Some(etag)
+        } else {
+            None
+        };
         let content = Some(if compressible {
             let compressed_name = format!("{name}.br");
             let compressed_name_raw = compressed_name.as_bytes();
@@ -179,23 +172,42 @@ pub(crate) fn build_entry(
                 Cow::Borrowed(it) => it.to_vec(),
             }
         });
-        if let Some(ref content) = content {
-            headers.push(Line::with_owned_value(
-                CONTENT_LENGTH,
-                format!("{}", content.len()).into_bytes(),
-            ));
-            if compressible {
-                headers.push(Line::with_array_ref_value(CONTENT_ENCODING, b"br"));
+        if let Some(content) = content {
+            if redirection {
+                headers.push(Line::with_slice_value(CONTENT_LENGTH, b"0"));
+                let end = content
+                    .iter()
+                    .position(|&b| b.is_ascii_whitespace())
+                    .unwrap_or(content.len());
+                headers.push(Line::with_owned_value(LOCATION, content[..end].into()));
+                Ok(Some((
+                    path,
+                    Entry {
+                        headers,
+                        content: None,
+                        etag,
+                    },
+                )))
+            } else {
+                headers.push(Line::with_owned_value(
+                    CONTENT_LENGTH,
+                    format!("{}", content.len()).into_bytes(),
+                ));
+                if compressible {
+                    headers.push(Line::with_array_ref_value(CONTENT_ENCODING, b"br"));
+                }
+                Ok(Some((
+                    path,
+                    Entry {
+                        headers,
+                        content: Some(content),
+                        etag,
+                    },
+                )))
             }
+        } else {
+            Ok(None)
         }
-        Ok(Some((
-            path,
-            Entry {
-                headers,
-                content,
-                etag,
-            },
-        )))
     } else {
         Ok(None)
     }
@@ -208,6 +220,8 @@ mod tests {
     use crate::http::headers::CONTENT_TYPE;
     use reqwest::blocking::Client;
     use test_tracing::test;
+
+    const COMMIT_HASH: &str = "cf874829749d85c92eeeabae44ed8050864f400f";
 
     fn download(url: &str) -> Vec<u8> {
         let response = Client::default()
@@ -225,10 +239,10 @@ mod tests {
         let zip = download(&zip_download_commit_url(
             "programingjd",
             "about.programingjd.me",
-            "b9ea1260114c63a9d5761fe214b85299cc617c5c",
+            COMMIT_HASH,
         ));
         let handler = Handler::builder()
-            .with_zip_prefix("about.programingjd.me-b9ea1260114c63a9d5761fe214b85299cc617c5c/")
+            .with_zip_prefix(&format!("about.programingjd.me-{COMMIT_HASH}/"))
             .with_zip(zip)
             .try_build();
         assert!(handler.is_ok());
@@ -251,6 +265,26 @@ mod tests {
         assert!(handler.paths.get("/").is_some());
         assert!(handler.paths.get("/").unwrap().etag.is_some());
         assert!(handler.paths.get("/index.html").is_none());
+        assert!(handler.paths.get("/about").is_some());
+        assert!(handler.paths.get("/about").unwrap().content.is_none());
+        assert!(handler.paths.get("/about").unwrap().etag.is_none());
+        assert!(handler
+            .paths
+            .get("/about")
+            .unwrap()
+            .headers
+            .iter()
+            .any(|it| it.key == LOCATION));
+        assert!(handler.paths.get("/profile.jpg").is_some());
+        assert!(handler.paths.get("/profile.jpg").unwrap().content.is_none());
+        assert!(handler.paths.get("/profile.jpg").unwrap().etag.is_some());
+        assert!(handler
+            .paths
+            .get("/profile.jpg")
+            .unwrap()
+            .headers
+            .iter()
+            .any(|it| it.key == LOCATION));
     }
 
     #[test]
@@ -258,10 +292,10 @@ mod tests {
         let zip = download(&zip_download_commit_url(
             "programingjd",
             "about.programingjd.me",
-            "b9ea1260114c63a9d5761fe214b85299cc617c5c",
+            COMMIT_HASH,
         ));
         let handler = Handler::builder()
-            .with_zip_prefix("about.programingjd.me-b9ea1260114c63a9d5761fe214b85299cc617c5c/")
+            .with_zip_prefix(&format!("about.programingjd.me-{COMMIT_HASH}/"))
             .with_zip(zip)
             .with_root_prefix("test/")
             .try_build();
@@ -290,5 +324,35 @@ mod tests {
         assert!(handler.paths.get("/test/").unwrap().etag.is_none());
         assert!(handler.paths.get("/test").is_some());
         assert!(handler.paths.get("/test").unwrap().etag.is_some());
+        assert!(handler.paths.get("/test/about").is_some());
+        assert!(handler.paths.get("/test/about").unwrap().content.is_none());
+        assert!(handler.paths.get("/test/about").unwrap().etag.is_none());
+        assert!(handler
+            .paths
+            .get("/test/about")
+            .unwrap()
+            .headers
+            .iter()
+            .any(|it| it.key == LOCATION));
+        assert!(handler.paths.get("/test/profile.jpg").is_some());
+        assert!(handler
+            .paths
+            .get("/test/profile.jpg")
+            .unwrap()
+            .content
+            .is_none());
+        assert!(handler
+            .paths
+            .get("/test/profile.jpg")
+            .unwrap()
+            .etag
+            .is_some());
+        assert!(handler
+            .paths
+            .get("/test/profile.jpg")
+            .unwrap()
+            .headers
+            .iter()
+            .any(|it| it.key == LOCATION));
     }
 }

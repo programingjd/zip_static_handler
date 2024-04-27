@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.7.0"
+version = "0.8.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -24,7 +24,7 @@ default-features = false
 features = []
 
 [dependencies.brotli]
-version = "4.0"
+version = "5.0"
 default-features = false
 features = ["std"]
 
@@ -40,7 +40,7 @@ features = ["std", "attributes"]
 
 [dependencies.hyper]
 optional = true
-version = "1.2"
+version = "1.3"
 default-features = false
 features = []
 

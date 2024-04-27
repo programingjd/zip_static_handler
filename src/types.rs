@@ -47,20 +47,20 @@ pub(crate) fn default_error_headers() -> &'static [Line] {
 pub(crate) fn headers_for_type(filename: &str, extension: &str) -> Option<HeadersAndCompression> {
     match extension {
         "html" | "htm" => Some(headers_and_compression(
-            b"text/html",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"text/html"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "css" => Some(headers_and_compression(
-            b"text/css",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"text/css"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "js" | "mjs" | "map" => Some(
             if filename.starts_with("service-worker.") || filename.starts_with("sw.") {
                 let mut headers_and_compression = headers_and_compression(
-                    b"application/javascript",
-                    CACHE_CONTROL_NO_CACHE,
+                    Some(b"application/javascript"),
+                    Some(CACHE_CONTROL_NO_CACHE),
                     true,
                 );
                 headers_and_compression
@@ -68,121 +68,139 @@ pub(crate) fn headers_for_type(filename: &str, extension: &str) -> Option<Header
                     .push(Line::with_array_ref_value(SERVICE_WORKER_ALLOWED, b"/"));
                 headers_and_compression
             } else {
-                headers_and_compression(b"application/javascript", CACHE_CONTROL_REVALIDATE, true)
+                headers_and_compression(
+                    Some(b"application/javascript"),
+                    Some(CACHE_CONTROL_REVALIDATE),
+                    true,
+                )
             },
         ),
         "json" => Some(headers_and_compression(
-            b"application/json",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"application/json"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "txt" => Some(headers_and_compression(
-            b"text/plain",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"text/plain"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "csv" => Some(headers_and_compression(
-            b"text/csv",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"text/csv"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "md" => Some(headers_and_compression(
-            b"text/markdown",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"text/markdown"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "wasm" => Some(headers_and_compression(
-            b"application/wasm",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"application/wasm"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "woff2" => Some(headers_and_compression(
-            b"font/woff2",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"font/woff2"),
+            Some(CACHE_CONTROL_REVALIDATE),
             false,
         )),
         "ico" => Some(headers_and_compression(
-            b"image/x-icon",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/x-icon"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             true,
         )),
         "webp" => Some(headers_and_compression(
-            b"image/webp",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/webp"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "avif" => Some(headers_and_compression(
-            b"image/avif",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/avif"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "gif" => Some(headers_and_compression(
-            b"image/gif",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/gif"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "heif" => Some(headers_and_compression(
-            b"image/heif",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/heif"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "heic" => Some(headers_and_compression(
-            b"image/heic",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/heic"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "png" => Some(headers_and_compression(
-            b"image/png",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/png"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "jpg" => Some(headers_and_compression(
-            b"image/jpeg",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/jpeg"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             false,
         )),
         "mp3" => Some(headers_and_compression(
-            b"audio/mp3",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"audio/mp3"),
+            Some(CACHE_CONTROL_REVALIDATE),
             false,
         )),
         "mp4" => Some(headers_and_compression(
-            b"video/mp4",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"video/mp4"),
+            Some(CACHE_CONTROL_REVALIDATE),
             false,
         )),
         "svg" => Some(headers_and_compression(
-            b"image/svg+xml",
-            CACHE_CONTROL_IMMUTABLE,
+            Some(b"image/svg+xml"),
+            Some(CACHE_CONTROL_IMMUTABLE),
             true,
         )),
         "pdf" => Some(headers_and_compression(
-            b"application/pdf",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"application/pdf"),
+            Some(CACHE_CONTROL_REVALIDATE),
             true,
         )),
         "zip" => Some(headers_and_compression(
-            b"application/zip",
-            CACHE_CONTROL_REVALIDATE,
+            Some(b"application/zip"),
+            Some(CACHE_CONTROL_REVALIDATE),
             false,
         )),
+        "307" => Some(headers_and_compression(
+            None,
+            Some(CACHE_CONTROL_REVALIDATE),
+            false,
+        )),
+        "308" => Some(headers_and_compression(None, None, false)),
         _ => None,
     }
 }
 
 fn headers_and_compression(
-    content_type: &'static [u8],
-    cache_control: &'static [u8],
+    content_type: Option<&'static [u8]>,
+    cache_control: Option<&'static [u8]>,
     compressible: bool,
 ) -> HeadersAndCompression {
     let default_headers = default_headers();
-    let new_headers: Vec<Line> = vec![
-        Line::with_slice_value(CONTENT_TYPE, content_type),
-        Line::with_slice_value(CACHE_CONTROL, cache_control),
-    ];
+    let mut new_headers = vec![];
+    if let Some(content_type) = content_type {
+        new_headers.push(Line::with_slice_value(CONTENT_TYPE, content_type));
+    }
+    if let Some(cache_control) = cache_control {
+        new_headers.push(Line::with_slice_value(CACHE_CONTROL, cache_control));
+    }
     HeadersAndCompression {
-        headers: default_headers.cloned().chain(new_headers).collect(),
+        headers: if new_headers.is_empty() {
+            default_headers.cloned().collect()
+        } else {
+            default_headers.cloned().chain(new_headers).collect()
+        },
         compressible,
+        redirection: content_type.is_none(),
     }
 }
 

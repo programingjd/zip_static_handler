@@ -116,6 +116,7 @@ pub mod headers {
 pub mod response {
     pub enum StatusCode {
         OK,
+        NoContent,
         NotModified,
         TemporaryRedirect,
         PermanentRedirect,
@@ -133,6 +134,7 @@ pub mod response {
         fn from(value: StatusCode) -> Self {
             match value {
                 StatusCode::OK => 200,
+                StatusCode::NoContent => 204,
                 StatusCode::NotModified => 304,
                 StatusCode::TemporaryRedirect => 307,
                 StatusCode::PermanentRedirect => 308,
