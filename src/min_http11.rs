@@ -26,12 +26,11 @@ impl Handler {
                 None
             }
             Err(Error::UnknownMethod(_)) => None,
-            Err(Error::BadRequest) => {
+            Err(_) => {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 Self::write_headers(writer, self.error_headers.iter(), true).await?;
                 None
             }
-            Err(_) => unimplemented!(),
             Ok(it) => Some(it),
         }
     }
@@ -63,12 +62,11 @@ impl Handler {
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
-            Err(Error::BadRequest) => {
+            Err(_) => {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
-            Err(_) => unimplemented!(),
             Ok((known_headers, _)) => known_headers,
         };
         if let Some(value) = known_headers.content_length {
