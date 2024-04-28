@@ -108,12 +108,11 @@ impl Handler {
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
-            Err(Error::BadRequest) => {
+            Err(_) => {
                 Self::write_status_line(writer, StatusCode::BadRequest).await?;
                 self.write_error_headers(writer, true).await?;
                 return None;
             }
-            Err(_) => unimplemented!(),
             Ok((known_headers, _)) => known_headers,
         };
         if let Some(value) = known_headers.content_length {
