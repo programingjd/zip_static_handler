@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.8.2"
+version = "0.8.3"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
