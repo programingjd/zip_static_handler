@@ -24,7 +24,7 @@ default-features = false
 features = []
 
 [dependencies.brotli]
-version = "5.0"
+version = "6.0"
 default-features = false
 features = ["std"]
 

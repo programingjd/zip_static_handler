@@ -1,6 +1,6 @@
 use crate::errors::Result;
 use crate::handler::{Entry, Handler, HeaderSelector, HeadersAndCompression};
-use crate::http::headers::{Line, LOCATION};
+use crate::http::headers::{Line, CONTENT_LENGTH, LOCATION};
 use crate::types::DefaultHeaderSelector;
 use std::borrow::Borrow;
 use std::collections::HashMap;
@@ -291,6 +291,7 @@ impl<
                         header_selector.headers_for_extension(path_without_trailing_slash, "308")
                     {
                         let location = format!("{path_prefix}{path_without_trailing_slash}");
+                        headers.push(Line::with_slice_value(CONTENT_LENGTH, b"0"));
                         headers.push(Line::with_owned_value(LOCATION, location.into_bytes()));
                         let entry = Entry {
                             headers,
