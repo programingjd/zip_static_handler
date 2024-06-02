@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.8.3"
+version = "0.8.4"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -64,7 +64,7 @@ features = []
 
 [dependencies.actix-web]
 optional = true
-version = "4.5"
+version = "4.6"
 default-features = false
 features = []
 
@@ -76,13 +76,13 @@ features = []
 
 [dependencies.xitca-web]
 optional = true
-version = "0.4"
+version = "0.5"
 default-features = false
 features = ["http1", "http-body"]
 
 [dependencies.tokio]
 optional = true
-version = "1.37"
+version = "1.38"
 default-features = false
 features = ["io-util"]
 
@@ -93,8 +93,8 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
-#default = ["hyper", "axum", "actix", "rocket", "xitca", "min_http11"]
+#default = []
+default = ["hyper", "axum", "actix", "rocket", "xitca", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
@@ -108,7 +108,7 @@ version = "0.12"
 features = ["blocking", "rustls-tls"]
 
 [dev-dependencies.tokio]
-version = "1.37"
+version = "1.38"
 default-features = false
 features = ["full"]
 
@@ -127,7 +127,7 @@ features = ["tokio", "http1", "tracing"]
 # for the actix example
 
 [dev-dependencies.actix-web]
-version = "4.5"
+version = "4.6"
 default-features = false
 features = ["macros"]
 

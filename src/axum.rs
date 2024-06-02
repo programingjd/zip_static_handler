@@ -4,7 +4,6 @@ use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use axum_core::response::IntoResponse;
 use http::{HeaderMap, HeaderName, HeaderValue};
-use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
 
 type HttpStatusCode = http::StatusCode;
@@ -16,19 +15,6 @@ impl Handler {
         self.handle(RequestAdapter { inner: request })
     }
 }
-
-#[derive(Debug)]
-struct ErrorAdapter {
-    message: String,
-}
-
-impl Display for ErrorAdapter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for ErrorAdapter {}
 
 struct RequestAdapter {
     inner: AxumRequest,

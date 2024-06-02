@@ -3,7 +3,6 @@ use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use http::{HeaderName, HeaderValue, Response};
-use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
 use xitca_web::body::{BoxBody, RequestBody};
 use xitca_web::bytes::Bytes;
@@ -17,19 +16,6 @@ impl Handler {
         self.handle(RequestAdapter { inner: req })
     }
 }
-
-#[derive(Debug)]
-struct ErrorAdapter {
-    message: String,
-}
-
-impl Display for ErrorAdapter {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.message)
-    }
-}
-
-impl std::error::Error for ErrorAdapter {}
 
 struct RequestAdapter<'a, 'r, C> {
     inner: &'a WebContext<'r, C>,
