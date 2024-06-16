@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.8.5"
+version = "0.8.6"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -96,8 +96,8 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
-#default = ["hyper", "axum", "actix", "rocket", "xitca", "min_http11"]
+#default = []
+default = ["hyper", "axum", "actix", "rocket", "xitca", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
