@@ -18,6 +18,7 @@ lazy_static! {
             (CSP,
                 b"\
                     default-src 'self';\
+                    connect-src 'self' https:;\
                     script-src 'wasm-unsafe-eval';\
                     script-src-elem 'self' 'unsafe-inline';\
                     script-src-attr 'none';\
@@ -45,9 +46,8 @@ lazy_static! {
     };
 }
 
-const CACHE_CONTROL_NO_CACHE: &[u8] =
-    b"public,no-cache,max-age=0,must-revalidate;stale-if-error=3600";
-const CACHE_CONTROL_REVALIDATE: &[u8] = b"public,max-age=3600,must-revalidate,stale-if-error=3600";
+const CACHE_CONTROL_NO_CACHE: &[u8] = b"public,no-cache,max-age=0,stale-if-error=3600";
+const CACHE_CONTROL_REVALIDATE: &[u8] = b"public,max-age=3600,stale-if-error=3600";
 const CACHE_CONTROL_DEFAULT: &[u8] =
     b"public,max-age=72000,stale-while-revalidate=28800,stale-if-error=3600";
 const CACHE_CONTROL_IMMUTABLE: &[u8] =

@@ -1,4 +1,4 @@
-use crate::compression::{brotli, decompress};
+use crate::compression::{brotli_decompressed_crc32, compress_brotli, decompress_entry};
 use crate::errors::Result;
 use crate::http::headers::{
     Line, CACHE_CONTROL, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
@@ -146,15 +146,30 @@ pub(crate) fn build_entry(
         let content = Some(if compressible {
             let compressed_name = format!("{name}.br");
             let compressed_name_raw = compressed_name.as_bytes();
-            if let Some(entry) = entries
-                .iter()
-                .find(|it| it.file_name_raw == compressed_name_raw && it.crc32 == crc32)
-            {
-                let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
-                match decompress(zip_file_header)? {
-                    Cow::Owned(it) => it,
-                    Cow::Borrowed(it) => it.to_vec(),
+            if let Some(entry) = entries.iter().find_map(|entry| {
+                if entry.file_name_raw == compressed_name_raw {
+                    let zip_file_header =
+                        ZipLocalFileHeader::from_central_directory(cursor, entry).ok()?;
+                    let decompressed = match decompress_entry(zip_file_header).ok()? {
+                        Cow::Owned(it) => it,
+                        Cow::Borrowed(it) => it.to_vec(),
+                    };
+                    if let Some(uncompressed_crc32) =
+                        brotli_decompressed_crc32(decompressed.as_slice())
+                    {
+                        if uncompressed_crc32 == crc32 {
+                            Some(decompressed)
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
                 }
+            }) {
+                entry
             } else if let Some(entry) = previous.and_then(|it| {
                 it.paths
                     .get(&compressed_name)
@@ -164,10 +179,10 @@ pub(crate) fn build_entry(
             } else {
                 debug!("brotli {path}", path = path);
                 let compressed_size = zip_file_header.compressed_size as usize;
-                brotli(decompress(zip_file_header)?.as_ref(), compressed_size)
+                compress_brotli(decompress_entry(zip_file_header)?.as_ref(), compressed_size)
             }
         } else {
-            match decompress(zip_file_header)? {
+            match decompress_entry(zip_file_header)? {
                 Cow::Owned(it) => it,
                 Cow::Borrowed(it) => it.to_vec(),
             }
@@ -216,7 +231,7 @@ pub(crate) fn build_entry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::github::zip_download_commit_url;
+    use crate::github::{zip_download_branch_url, zip_download_commit_url};
     use crate::http::headers::CONTENT_TYPE;
     use reqwest::blocking::Client;
     use test_tracing::test;
@@ -224,6 +239,7 @@ mod tests {
     const COMMIT_HASH: &str = "cf874829749d85c92eeeabae44ed8050864f400f";
 
     fn download(url: &str) -> Vec<u8> {
+        debug!(url = url);
         let response = Client::default()
             .get(url)
             .send()
@@ -285,6 +301,22 @@ mod tests {
             .headers
             .iter()
             .any(|it| it.key == LOCATION));
+    }
+
+    #[test]
+    fn debug() {
+        let zip = download(&zip_download_branch_url(
+            "programingjd",
+            "kilter_compositex",
+            "main",
+        ));
+        let handler = Handler::builder()
+            .with_zip_prefix(&format!("kilter_compositex-main/"))
+            .with_zip(zip)
+            .with_root_prefix("/kilter")
+            .try_build();
+        assert!(handler.is_ok());
+        let handler = handler.unwrap();
     }
 
     #[test]
