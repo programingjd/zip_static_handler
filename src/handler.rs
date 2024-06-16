@@ -10,7 +10,7 @@ use crate::path::{extension, filename, path};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::io::Cursor;
-use tracing::{debug, info, trace};
+use tracing::{debug, trace};
 use zip_structs::zip_central_directory::ZipCDEntry;
 use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
@@ -132,7 +132,7 @@ pub(crate) fn build_entry(
     }) = header_selector.headers_for_extension(filename, extension)
     {
         let path = path(zip_prefix, &name);
-        info!(path = path);
+        debug!(unprefixed_path = path);
         let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
         let crc32 = zip_file_header.crc32;
         let etag = if headers.iter().any(|it| it.key == CACHE_CONTROL) {
@@ -301,22 +301,6 @@ mod tests {
             .headers
             .iter()
             .any(|it| it.key == LOCATION));
-    }
-
-    #[test]
-    fn debug() {
-        let zip = download(&zip_download_branch_url(
-            "programingjd",
-            "kilter_compositex",
-            "main",
-        ));
-        let handler = Handler::builder()
-            .with_zip_prefix(&format!("kilter_compositex-main/"))
-            .with_zip(zip)
-            .with_root_prefix("/kilter")
-            .try_build();
-        assert!(handler.is_ok());
-        let handler = handler.unwrap();
     }
 
     #[test]

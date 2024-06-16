@@ -6,7 +6,7 @@ use std::borrow::Borrow;
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::marker::PhantomData;
-use tracing::trace;
+use tracing::{info, trace};
 use zip_structs::zip_central_directory::ZipCDEntry;
 use zip_structs::zip_eocd::ZipEOCD;
 
@@ -298,11 +298,17 @@ impl<
                             content: None,
                             etag: None,
                         };
-                        routes.insert(format!("{path_prefix}{path}"), entry);
+                        let path = format!("{path_prefix}{path}");
+                        info!(path = &path);
+                        routes.insert(path, entry);
                     }
-                    routes.insert(format!("{path_prefix}{path_without_trailing_slash}"), value);
+                    let path = format!("{path_prefix}{path_without_trailing_slash}");
+                    info!(path = &path);
+                    routes.insert(path, value);
                 } else {
-                    routes.insert(format!("{path_prefix}{path}"), value);
+                    let path = format!("{path_prefix}{path}");
+                    info!(path = &path);
+                    routes.insert(path, value);
                 }
             }
         }
