@@ -1,5 +1,6 @@
 use brotli::enc::BrotliEncoderParams;
 use brotli::BrotliDecompress;
+use bytes::Bytes;
 use crc32fast::Hasher;
 use inflate::InflateWriter;
 use std::borrow::Cow;
@@ -8,10 +9,13 @@ use zip_structs::zip_local_file_header::ZipLocalFileHeader;
 
 pub(crate) fn decompress_entry(
     zip_file_header: ZipLocalFileHeader,
-) -> crate::errors::Result<Cow<[u8]>> {
+) -> crate::errors::Result<Bytes> {
     match zip_file_header.compression_method {
-        0u16 /* stored  */ => Ok(zip_file_header.compressed_data),
-        8u16 /* deflate */ => Ok(Cow::Owned(inflate(
+        0u16 /* stored  */ => Ok(match zip_file_header.compressed_data {
+            Cow::Owned(it) => Bytes::from(it),
+            Cow::Borrowed(it) => Bytes::copy_from_slice(it),
+        }),
+        8u16 /* deflate */ => Ok(Bytes::from(inflate(
             zip_file_header.compressed_data.as_ref(),
             zip_file_header.uncompressed_size as usize,
         ))),

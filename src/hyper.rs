@@ -2,13 +2,12 @@ use crate::handler::Handler;
 use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
-use http_body_util::combinators::BoxBody;
-use http_body_util::{BodyExt, Empty, Full};
+use http_body_util::{Either, Empty, Full};
 use hyper::body::Bytes;
 use hyper::http::{HeaderName, HeaderValue};
 use std::str::from_utf8;
 
-type HyperResponse = hyper::Response<BoxBody<Bytes, hyper::Error>>;
+type HyperResponse = hyper::Response<Either<Full<Bytes>, Empty<Bytes>>>;
 type HyperRequest = hyper::Request<hyper::body::Incoming>;
 
 impl Handler {
@@ -40,7 +39,7 @@ impl Request<HyperResponse> for RequestAdapter {
         self,
         code: StatusCode,
         headers: impl Iterator<Item = &'a Line>,
-        body: Option<&'a [u8]>,
+        body: Option<Bytes>,
     ) -> HyperResponse {
         let code: u16 = code.into();
         let mut builder = hyper::Response::builder().status(code);
@@ -52,20 +51,9 @@ impl Request<HyperResponse> for RequestAdapter {
                 }
             }
         });
-        let body = body.map(Self::full).unwrap_or_else(Self::empty);
+        let body = body
+            .map(|b| Either::Left(Full::new(b)))
+            .unwrap_or_else(|| Either::Right(Empty::new()));
         builder.body(body).unwrap()
-    }
-}
-
-impl RequestAdapter {
-    fn full(slice: impl AsRef<[u8]> + Send) -> BoxBody<Bytes, hyper::Error> {
-        Full::new(Bytes::copy_from_slice(slice.as_ref()))
-            .map_err(|never| match never {})
-            .boxed()
-    }
-    fn empty() -> BoxBody<Bytes, hyper::Error> {
-        Empty::<Bytes>::new()
-            .map_err(|never| match never {})
-            .boxed()
     }
 }

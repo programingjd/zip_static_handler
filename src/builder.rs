@@ -78,12 +78,12 @@ impl<'a> Diff<'a> for &'a Handler {
     }
 }
 impl<'a> WithDiff<'a> for &'a Handler {}
-pub trait Bytes {}
-pub trait WithoutBytes: Bytes {}
-pub struct NoBytes;
-impl Bytes for NoBytes {}
-impl WithoutBytes for NoBytes {}
-impl<T: Borrow<[u8]>> Bytes for T {}
+pub trait Content {}
+pub trait WithoutContent: Content {}
+pub struct NoContent;
+impl Content for NoContent {}
+impl WithoutContent for NoContent {}
+impl<T: Borrow<[u8]>> Content for T {}
 
 pub struct Builder<
     'a,
@@ -92,7 +92,7 @@ pub struct Builder<
     R: PathPrefix,
     H: CustomHeaderSelector<'a>,
     D: Diff<'b>,
-    B: Bytes,
+    B: Content,
 > {
     _a: PhantomData<&'a ()>,
     _b: PhantomData<&'b ()>,
@@ -100,11 +100,11 @@ pub struct Builder<
     path_prefix: R,
     header_selector: H,
     diff: D,
-    bytes: B,
+    content: B,
 }
 
 impl Handler {
-    pub fn builder() -> Builder<'static, 'static, (), (), (), (), NoBytes> {
+    pub fn builder() -> Builder<'static, 'static, (), (), (), (), NoContent> {
         Builder {
             _a: PhantomData,
             _b: PhantomData,
@@ -112,7 +112,7 @@ impl Handler {
             path_prefix: (),
             header_selector: (),
             diff: (),
-            bytes: NoBytes,
+            content: NoContent,
         }
     }
 }
@@ -124,7 +124,7 @@ impl<
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
         D: Diff<'b>,
-        B: Bytes,
+        B: Content,
     > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn with_zip_prefix(self, prefix: impl Into<String>) -> Builder<'a, 'b, String, R, H, D, B> {
@@ -135,7 +135,7 @@ impl<
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
             diff: self.diff,
-            bytes: self.bytes,
+            content: self.content,
         }
     }
 }
@@ -147,7 +147,7 @@ impl<
         R: WithoutPathPrefix,
         H: CustomHeaderSelector<'a>,
         D: Diff<'b>,
-        B: Bytes,
+        B: Content,
     > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn with_root_prefix(
@@ -161,7 +161,7 @@ impl<
             path_prefix: sanitize_prefix(prefix.into()),
             header_selector: self.header_selector,
             diff: self.diff,
-            bytes: self.bytes,
+            content: self.content,
         }
     }
 }
@@ -186,7 +186,7 @@ impl<
         R: PathPrefix,
         H: WithoutCustomHeaderSelector<'a>,
         D: Diff<'b>,
-        B: Bytes,
+        B: Content,
     > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn with_custom_header_selector<S: WithCustomHeaderSelector<'a>>(
@@ -200,7 +200,7 @@ impl<
             path_prefix: self.path_prefix,
             header_selector,
             diff: self.diff,
-            bytes: self.bytes,
+            content: self.content,
         }
     }
 }
@@ -212,7 +212,7 @@ impl<
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
         D: WithoutDiff<'b>,
-        B: Bytes,
+        B: Content,
     > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn with_diff(self, diff: &'b Handler) -> Builder<'a, 'b, Z, R, H, &'b Handler, B> {
@@ -223,7 +223,7 @@ impl<
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
             diff,
-            bytes: self.bytes,
+            content: self.content,
         }
     }
 }
@@ -235,10 +235,10 @@ impl<
         R: PathPrefix,
         H: CustomHeaderSelector<'a>,
         D: Diff<'b>,
-        B: WithoutBytes,
+        B: WithoutContent,
     > Builder<'a, 'b, Z, R, H, D, B>
 {
-    pub fn with_zip<T: Borrow<[u8]>>(self, bytes: T) -> Builder<'a, 'b, Z, R, H, D, T> {
+    pub fn with_zip<T: Borrow<[u8]>>(self, content: T) -> Builder<'a, 'b, Z, R, H, D, T> {
         Builder {
             _a: PhantomData,
             _b: PhantomData,
@@ -246,7 +246,7 @@ impl<
             path_prefix: self.path_prefix,
             header_selector: self.header_selector,
             diff: self.diff,
-            bytes,
+            content,
         }
     }
 }
@@ -262,7 +262,7 @@ impl<
     > Builder<'a, 'b, Z, R, H, D, B>
 {
     pub fn try_build(self) -> Result<Handler> {
-        let bytes = self.bytes;
+        let bytes = self.content;
         let path_prefix = self.path_prefix.path_prefix().unwrap_or_default();
         let zip_prefix = self.zip_prefix.zip_prefix().unwrap_or_default();
         let diff = self.diff.diff();

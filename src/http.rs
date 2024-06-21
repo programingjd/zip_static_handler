@@ -160,6 +160,7 @@ pub mod method {
 pub mod request {
     use crate::http::headers::Line;
     use crate::http::response::StatusCode;
+    use bytes::Bytes;
 
     pub trait Request<R> {
         fn method(&self) -> &[u8];
@@ -169,7 +170,7 @@ pub mod request {
             self,
             code: StatusCode,
             headers: impl Iterator<Item = &'b Line>,
-            body: Option<&'b [u8]>,
+            body: Option<Bytes>,
         ) -> R;
     }
 }

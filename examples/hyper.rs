@@ -1,4 +1,4 @@
-use http_body_util::combinators::BoxBody;
+use http_body_util::{Either, Empty, Full};
 use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     service_fn(move |request| {
                         let handler = handler.clone();
                         async move {
-                            Ok::<hyper::Response<BoxBody<Bytes, hyper::Error>>, Infallible>(
+                            Ok::<hyper::Response<Either<Full<Bytes>, Empty<Bytes>>>, Infallible>(
                                 handler.handle_hyper_request(request),
                             )
                         }

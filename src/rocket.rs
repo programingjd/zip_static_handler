@@ -3,6 +3,7 @@ use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use crate::http::OwnedOrStatic;
+use bytes::Bytes;
 use rocket::http::uri::Path;
 use rocket::http::{Header, Status};
 use rocket::route::Handler as RocketHandler;
@@ -56,7 +57,7 @@ impl<'r, 'o> Request<Outcome<'r>> for RequestAdapter<'r, 'o> {
         self,
         code: StatusCode,
         headers: impl Iterator<Item = &'a Line>,
-        body: Option<&'a [u8]>,
+        body: Option<Bytes>,
     ) -> Outcome<'r> {
         let code: u16 = code.into();
         let mut builder = Response::build();
@@ -73,7 +74,7 @@ impl<'r, 'o> Request<Outcome<'r>> for RequestAdapter<'r, 'o> {
         });
         if let Some(bytes) = body {
             let len = bytes.len();
-            builder.sized_body(Some(len), Cursor::new(bytes.to_vec()));
+            builder.sized_body(Some(len), Cursor::new(bytes));
         }
         Outcome::Success(builder.finalize())
     }

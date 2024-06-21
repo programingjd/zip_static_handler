@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.8.6"
+version = "0.9.0"
 edition = "2021"
 rust-version = "1.75"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -25,6 +25,11 @@ features = []
 
 [dependencies.brotli]
 version = "6.0"
+default-features = false
+features = ["std"]
+
+[dependencies.bytes]
+version = "1.6"
 default-features = false
 features = ["std"]
 
@@ -64,7 +69,7 @@ features = []
 
 [dependencies.actix-web]
 optional = true
-version = "4.7"
+version = "4.8"
 default-features = false
 features = []
 
@@ -74,11 +79,11 @@ version = "0.5"
 default-features = false
 features = []
 
-[dependencies.xitca-web]
+[dependencies.xitca-http]
 optional = true
 version = "0.5"
 default-features = false
-features = ["http1", "http-body"]
+features = []
 
 [dependencies.tokio]
 optional = true
@@ -102,7 +107,7 @@ hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
 rocket = ["dep:rocket"]
-xitca = ["dep:xitca-web"]
+xitca = ["dep:xitca-http"]
 min_http11 = ["min_http11_parser/_minimal", "dep:tokio"]
 
 #http client for downloading zip from github
@@ -130,7 +135,7 @@ features = ["tokio", "http1", "tracing"]
 # for the actix example
 
 [dev-dependencies.actix-web]
-version = "4.7"
+version = "4.8"
 default-features = false
 features = ["macros"]
 
@@ -138,6 +143,21 @@ features = ["macros"]
 version = "0.5"
 default-features = false
 features = []
+
+[dev-dependencies.xitca-http]
+version = "0.5"
+default-features = false
+features = ["http1"]
+
+[dev-dependencies.xitca-web]
+version = "0.5"
+default-features = false
+features = ["http1"]
+
+[dev-dependencies.xitca-service]
+version = "0.1"
+default-features = false
+features = ["std"]
 
 # for the tests
 [dev-dependencies.tracing-subscriber]

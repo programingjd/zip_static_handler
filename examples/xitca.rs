@@ -1,9 +1,9 @@
-use http::Response;
 use reqwest::Client;
 use std::borrow::Borrow;
 use std::sync::Arc;
-use xitca_web::body::BoxBody;
+use xitca_web::body::ResponseBody;
 use xitca_web::handler::handler_service;
+use xitca_web::http::{Request, RequestExt, Response};
 use xitca_web::route::get;
 use xitca_web::{App, WebContext};
 use zip_static_handler::github::zip_download_branch_url;
@@ -50,8 +50,11 @@ impl Borrow<Handler> for State {
     }
 }
 
-async fn static_handler(req: &WebContext<'_, State>) -> Response<BoxBody> {
-    let handler: &Handler = req.state().borrow();
+async fn static_handler<E>(
+    req: Request<RequestExt<E>>,
+    ctx: &WebContext<'_, State>,
+) -> Response<ResponseBody> {
+    let handler: &Handler = ctx.state().borrow();
     handler.handle_xitca_request(req)
 }
 

@@ -7,7 +7,7 @@ use crate::http::method;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use crate::path::{extension, filename, path};
-use std::borrow::Cow;
+use bytes::Bytes;
 use std::collections::HashMap;
 use std::io::Cursor;
 use tracing::{debug, trace};
@@ -23,11 +23,7 @@ impl Handler {
     pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
-                return request.response(
-                    StatusCode::BadRequest,
-                    self.error_headers.iter(),
-                    None::<&[u8]>,
-                );
+                return request.response(StatusCode::BadRequest, self.error_headers.iter(), None);
             }
         }
         let is_get = match request.method() {
@@ -37,7 +33,7 @@ impl Handler {
                 return request.response(
                     StatusCode::MethodNotAllowed,
                     self.error_headers.iter(),
-                    None::<&[u8]>,
+                    None,
                 )
             }
         };
@@ -49,40 +45,50 @@ impl Handler {
                 let none_match = request.first_header_value(IF_NONE_MATCH);
                 let if_match = request.first_header_value(IF_MATCH);
                 if none_match.is_some() && none_match == etag {
-                    request.response(StatusCode::NotModified, headers.iter(), None::<&[u8]>)
+                    request.response(
+                        StatusCode::NotModified,
+                        headers
+                            .iter()
+                            .filter(|&line| !matches!(line.key, CONTENT_LENGTH | CONTENT_ENCODING)),
+                        None,
+                    )
                 } else if if_match.is_some() && if_match != etag {
                     request.response(
                         StatusCode::PreconditionFailed,
-                        headers.iter(),
-                        None::<&[u8]>,
+                        headers
+                            .iter()
+                            .filter(|&line| !matches!(line.key, CONTENT_LENGTH | CONTENT_ENCODING)),
+                        None,
                     )
                 } else if let Some(ref body) = file.content {
                     request.response(
                         StatusCode::OK,
                         headers.iter(),
-                        if is_get { Some(body.as_slice()) } else { None },
+                        if is_get { Some(body.clone()) } else { None },
                     )
                 } else if headers.iter().any(|it| it.key == LOCATION) {
                     request.response(StatusCode::TemporaryRedirect, headers.iter(), None)
                 } else {
-                    request.response(StatusCode::NoContent, headers.iter(), None)
+                    request.response(
+                        StatusCode::NoContent,
+                        headers
+                            .iter()
+                            .filter(|&line| !matches!(line.key, CONTENT_LENGTH | CONTENT_ENCODING)),
+                        None,
+                    )
                 }
             } else {
-                request.response(StatusCode::PermanentRedirect, headers.iter(), None::<&[u8]>)
+                request.response(StatusCode::PermanentRedirect, headers.iter(), None)
             }
         } else {
-            request.response(
-                StatusCode::NotFound,
-                self.error_headers.iter(),
-                None::<&[u8]>,
-            )
+            request.response(StatusCode::NotFound, self.error_headers.iter(), None)
         }
     }
 }
 
 pub(crate) struct Entry {
     pub headers: Vec<Line>,
-    pub content: Option<Vec<u8>>,
+    pub content: Option<Bytes>,
     pub etag: Option<String>,
 }
 
@@ -150,12 +156,9 @@ pub(crate) fn build_entry(
                 if entry.file_name_raw == compressed_name_raw {
                     let zip_file_header =
                         ZipLocalFileHeader::from_central_directory(cursor, entry).ok()?;
-                    let decompressed = match decompress_entry(zip_file_header).ok()? {
-                        Cow::Owned(it) => it,
-                        Cow::Borrowed(it) => it.to_vec(),
-                    };
+                    let decompressed = decompress_entry(zip_file_header).ok()?;
                     if let Some(uncompressed_crc32) =
-                        brotli_decompressed_crc32(decompressed.as_slice())
+                        brotli_decompressed_crc32(decompressed.as_ref())
                     {
                         if uncompressed_crc32 == crc32 {
                             Some(decompressed)
@@ -179,13 +182,13 @@ pub(crate) fn build_entry(
             } else {
                 debug!("brotli {path}", path = path);
                 let compressed_size = zip_file_header.compressed_size as usize;
-                compress_brotli(decompress_entry(zip_file_header)?.as_ref(), compressed_size)
+                Bytes::from(compress_brotli(
+                    decompress_entry(zip_file_header)?.as_ref(),
+                    compressed_size,
+                ))
             }
         } else {
-            match decompress_entry(zip_file_header)? {
-                Cow::Owned(it) => it,
-                Cow::Borrowed(it) => it.to_vec(),
-            }
+            decompress_entry(zip_file_header)?
         });
         if let Some(content) = content {
             if redirection {

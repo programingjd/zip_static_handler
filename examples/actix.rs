@@ -1,6 +1,7 @@
-use actix_web::body::BoxBody;
+use actix_web::body::EitherBody;
 use actix_web::web::Data;
 use actix_web::{web, App, HttpRequest, HttpResponse, HttpServer};
+use bytes::Bytes;
 use reqwest::Client;
 use std::error::Error;
 use std::sync::Arc;
@@ -31,7 +32,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     .await?)
 }
 
-async fn static_handler(state: Data<Arc<Handler>>, request: HttpRequest) -> HttpResponse<BoxBody> {
+async fn static_handler(
+    state: Data<Arc<Handler>>,
+    request: HttpRequest,
+) -> HttpResponse<EitherBody<Bytes, ()>> {
     state.handle_actix_request(request)
 }
 

@@ -3,6 +3,7 @@ use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
 use axum_core::response::IntoResponse;
+use bytes::Bytes;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use std::str::from_utf8;
 
@@ -39,7 +40,7 @@ impl Request<AxumResponse> for RequestAdapter {
         self,
         code: StatusCode,
         headers: impl Iterator<Item = &'a Line>,
-        body: Option<&'a [u8]>,
+        body: Option<Bytes>,
     ) -> AxumResponse {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let mut map = HeaderMap::new();
@@ -51,7 +52,7 @@ impl Request<AxumResponse> for RequestAdapter {
             }
         });
         if let Some(bytes) = body {
-            (status_code, map, bytes.to_vec()).into_response()
+            (status_code, map, bytes).into_response()
         } else {
             (status_code, map).into_response()
         }
