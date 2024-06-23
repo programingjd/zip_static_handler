@@ -5,7 +5,7 @@ pub(crate) fn path(zip_prefix: &str, name: &str) -> String {
         if &name[start..] == "index.html" {
             "/".to_string()
         } else {
-            format!("/{}/", &name[start..name.len() - 4])
+            format!("/{}/", &name[start..name.len() - 5])
         }
     } else if name.ends_with(".307") || name.ends_with(".308") {
         format!("/{}/", &name[start..name.len() - 4])
@@ -33,13 +33,13 @@ mod tests {
         let prefix = "/prefix";
         assert_eq!(path(prefix, "/prefix/index.html"), "/");
         assert_eq!(path(prefix, "/prefix/a/b"), "/a/b");
-        assert_eq!(path(prefix, "/prefix/a/b.html"), "/a/b");
+        assert_eq!(path(prefix, "/prefix/a/b.html"), "/a/b/");
         assert_eq!(path(prefix, "/prefix/a/b/"), "/a/b/");
         assert_eq!(path(prefix, "/prefix/a/b/c.jpg"), "/a/b/c.jpg");
         let prefix = "/prefix/";
         assert_eq!(path(prefix, "/prefix/index.html"), "/");
         assert_eq!(path(prefix, "/prefix/a/b"), "/a/b");
-        assert_eq!(path(prefix, "/prefix/a/b.html"), "/a/b");
+        assert_eq!(path(prefix, "/prefix/a/b.html"), "/a/b/");
         assert_eq!(path(prefix, "/prefix/a/b/"), "/a/b/");
         assert_eq!(path(prefix, "/prefix/a/b/c.jpg"), "/a/b/c.jpg");
     }
@@ -48,12 +48,12 @@ mod tests {
     fn path_no_prefix() {
         assert_eq!(path("", "/index.html"), "/");
         assert_eq!(path("", "/a/b"), "/a/b");
-        assert_eq!(path("", "/a/b.html"), "/a/b");
+        assert_eq!(path("", "/a/b.html"), "/a/b/");
         assert_eq!(path("", "/a/b/"), "/a/b/");
         assert_eq!(path("", "/a/b/c.jpg"), "/a/b/c.jpg");
         assert_eq!(path("", "index.html"), "/");
         assert_eq!(path("", "a/b"), "/a/b");
-        assert_eq!(path("", "a/b.html"), "/a/b");
+        assert_eq!(path("", "a/b.html"), "/a/b/");
         assert_eq!(path("", "a/b/"), "/a/b/");
         assert_eq!(path("", "a/b/c.jpg"), "/a/b/c.jpg");
     }
