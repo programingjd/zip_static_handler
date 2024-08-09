@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "about.programingjd.me",
         "main",
     ))
-        .await?;
+    .await?;
     let listener = TcpListener::bind(("127.0.0.1", 8080u16)).await?;
     let handler = Arc::new(
         Handler::builder()
