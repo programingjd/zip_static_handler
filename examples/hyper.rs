@@ -3,19 +3,17 @@ use hyper::body::Bytes;
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper_util::rt::TokioIo;
-use lazy_static::lazy_static;
 use reqwest::Client;
 use std::convert::Infallible;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use tokio::net::TcpListener;
 use tokio::spawn;
 use zip_static_handler::github::zip_download_branch_url;
 use zip_static_handler::handler::{Handler, HeaderSelector, HeadersAndCompression};
 use zip_static_handler::http::headers::{Line, ALLOW, CACHE_CONTROL, CONTENT_TYPE};
 
-lazy_static! {
-    static ref DEFAULT_HEADERS: Vec<Line> = vec![Line::with_array_ref_value(ALLOW, b"GET, HEAD")];
-}
+static DEFAULT_HEADERS: LazyLock<Vec<Line>> =
+    LazyLock::new(|| vec![Line::with_array_ref_value(ALLOW, b"GET, HEAD")]);
 
 async fn download(url: &str) -> Result<Vec<u8>, reqwest::Error> {
     let response = Client::default().get(url).send().await?;
@@ -105,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "about.programingjd.me",
         "main",
     ))
-    .await?;
+        .await?;
     let listener = TcpListener::bind(("127.0.0.1", 8080u16)).await?;
     let handler = Arc::new(
         Handler::builder()
