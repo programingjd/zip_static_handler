@@ -26,6 +26,7 @@ pub mod headers {
     use crate::http::OwnedOrStatic;
 
     pub const ALLOW: &[u8] = b"allow";
+    pub const CORS: &[u8] = b"access-control-allow-origin";
     pub const CACHE_CONTROL: &[u8] = b"cache-control";
     pub const CONTENT_ENCODING: &[u8] = b"content-encoding";
     pub const CONTENT_LENGTH: &[u8] = b"content-length";
@@ -169,7 +170,7 @@ pub mod request {
         fn response<'b>(
             self,
             code: StatusCode,
-            headers: impl Iterator<Item = &'b Line>,
+            headers: impl Iterator<Item=&'b Line>,
             body: Option<Bytes>,
         ) -> R;
     }
