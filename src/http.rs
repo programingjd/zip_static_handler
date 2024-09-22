@@ -170,7 +170,7 @@ pub mod request {
         fn response<'b>(
             self,
             code: StatusCode,
-            headers: impl Iterator<Item=&'b Line>,
+            headers: impl Iterator<Item = &'b Line>,
             body: Option<Bytes>,
         ) -> R;
     }
