@@ -22,6 +22,9 @@ pub mod rocket;
 #[cfg(feature = "xitca")]
 pub mod xitca;
 
+#[cfg(feature = "salvo")]
+pub mod salvo;
+
 #[cfg(feature = "min_http11_parser")]
 pub mod min_http11;
 

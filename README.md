@@ -51,8 +51,8 @@ The only argument that the builder requires is the zip archive content as bytes.
 ```rust
 let zip_bytes: & [u8] = download_zip();
 let handler = Handler::builder()
-    .with_zip(zip_bytes)
-    .try_build()?;
+.with_zip(zip_bytes)
+.try_build() ?;
 ```
 
 There are helper functions to download a zip archive from a github repository (by branch, tag or commit hash).
@@ -68,10 +68,10 @@ let zip_bytes = download( & zip_download_branch_url(
 ))
 .await?;
 let handler = Handler::builder()
-    .with_zip_prefix("about.programingjd.me-main/")
-    .with_path_prefix("about")
-    .with_zip(zip_bytes)
-    .try_build()?;
+.with_zip_prefix("about.programingjd.me-main/")
+.with_path_prefix("about")
+.with_zip(zip_bytes)
+.try_build() ?;
 ```
 
 If you are creating a new handler after each repository update, you can provide the previous handler for diffing.
@@ -81,10 +81,10 @@ All the unchanged files that need to be compressed will be copied from the old h
 
 ```rust
 let handler = Handler::builder()
-    .with_zip_prefix("about.programingjd.me-main/")
-    .with_zip(zip_bytes)
-    .with_diff( & previous_handler)
-    .try_build()?;
+.with_zip_prefix("about.programingjd.me-main/")
+.with_zip(zip_bytes)
+.with_diff( & previous_handler)
+.try_build() ?;
 ```
 
 ## Features
@@ -115,6 +115,9 @@ You can choose the implementation of HTTP request and response that you need by 
 
   example: [xitca.rs](examples/xitca.rs)
 
+- salvo
+
+  example: [salvo.rs](examples/salvo.rs)
 
 - min_http11
 
