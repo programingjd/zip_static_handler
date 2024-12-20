@@ -54,7 +54,7 @@ impl<'a> CustomHeaderSelector<'a> for () {
         None
     }
 }
-impl<'a> WithoutCustomHeaderSelector<'a> for () {}
+impl WithoutCustomHeaderSelector<'_> for () {}
 impl<'a, T: HeaderSelector> WithCustomHeaderSelector<'a> for &'a T {}
 impl<'a, T: HeaderSelector> CustomHeaderSelector<'a> for &'a T {
     fn header_selector(self) -> Option<&'a dyn HeaderSelector> {
@@ -71,7 +71,7 @@ impl<'a> Diff<'a> for () {
         None
     }
 }
-impl<'a> WithoutDiff<'a> for () {}
+impl WithoutDiff<'_> for () {}
 impl<'a> Diff<'a> for &'a Handler {
     fn diff(self) -> Option<&'a Handler> {
         Some(self)

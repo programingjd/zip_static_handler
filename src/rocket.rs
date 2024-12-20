@@ -38,7 +38,7 @@ struct RequestAdapter<'r, 'o> {
     path: Path<'r>,
 }
 
-impl<'r, 'o> Request<Outcome<'r>> for RequestAdapter<'r, 'o> {
+impl<'r> Request<Outcome<'r>> for RequestAdapter<'r, '_> {
     fn method(&self) -> &[u8] {
         self.inner.method().as_str().as_bytes()
     }
