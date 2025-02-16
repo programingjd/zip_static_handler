@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let router = Router::new()
         .push(Router::with_path("version").get(version))
-        .push(Router::with_path("<**path>").get(state));
+        .push(Router::with_path("{**path}").get(state));
 
     let acceptor = TcpListener::new("127.0.0.1:8080").bind().await;
     Server::new(acceptor)
