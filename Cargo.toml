@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.14.0"
+version = "0.15.0"
 edition = "2021"
 rust-version = "1.83"
 authors = ["Jerome David <programingjd@gmail.com>"]
@@ -155,11 +155,6 @@ features = ["http1"]
 version = "0.6"
 default-features = false
 features = ["http1"]
-
-[dev-dependencies.xitca-service]
-version = "0.2"
-default-features = false
-features = ["std"]
 
 [dev-dependencies.salvo]
 version = "0.76"

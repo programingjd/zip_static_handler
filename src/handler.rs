@@ -20,6 +20,9 @@ pub struct Handler {
 }
 
 impl Handler {
+    pub fn entry(&self, path: &str) -> Option<&Entry> {
+        self.paths.get(path)
+    }
     pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
         if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
             if value != b"0" {
@@ -38,7 +41,7 @@ impl Handler {
             }
         };
         let path = String::from_utf8_lossy(request.path());
-        if let Some(file) = self.paths.get(path.as_ref()) {
+        if let Some(file) = self.entry(path.as_ref()) {
             let headers = &file.headers;
             if file.etag.is_some() {
                 let etag = file.etag.as_ref().map(|it| it.as_bytes());
@@ -86,7 +89,7 @@ impl Handler {
     }
 }
 
-pub(crate) struct Entry {
+pub struct Entry {
     pub headers: Vec<Line>,
     pub content: Option<Bytes>,
     pub etag: Option<String>,
