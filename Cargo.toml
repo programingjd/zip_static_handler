@@ -1,8 +1,7 @@
 [package]
 name = "zip_static_handler"
-version = "0.16.0"
-edition = "2021"
-rust-version = "1.83"
+version = "0.17.0"
+edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
 description = "Static file handler from zip archive"
@@ -64,7 +63,7 @@ features = []
 
 [dependencies.actix-web]
 optional = true
-version = "4.10"
+version = "4.11"
 default-features = false
 features = []
 
@@ -82,13 +81,13 @@ features = []
 
 [dependencies.salvo]
 optional = true
-version = "0.78"
+version = "0.79"
 default-features = false
 features = []
 
 [dependencies.tokio]
 optional = true
-version = "1.44"
+version = "1.45"
 default-features = false
 features = ["io-util"]
 
@@ -102,8 +101,8 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
-#default = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
+#default = []
+default = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
@@ -118,7 +117,7 @@ version = "0.12"
 features = ["blocking", "rustls-tls"]
 
 [dev-dependencies.tokio]
-version = "1.44"
+version = "1.45"
 default-features = false
 features = ["full"]
 
@@ -137,7 +136,7 @@ features = ["tokio", "http1", "tracing"]
 # for the actix example
 
 [dev-dependencies.actix-web]
-version = "4.10"
+version = "4.11"
 default-features = false
 features = ["macros"]
 
@@ -157,7 +156,7 @@ default-features = false
 features = ["http1"]
 
 [dev-dependencies.salvo]
-version = "0.78"
+version = "0.79"
 default-features = false
 features = ["server", "http1", "logging"]
 
