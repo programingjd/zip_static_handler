@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.17.0"
+version = "0.18.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -101,8 +101,8 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-#default = []
-default = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
+default = []
+#default = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
