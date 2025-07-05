@@ -1,7 +1,7 @@
 use crate::compression::{brotli_decompressed_crc32, compress_brotli, decompress_entry};
 use crate::errors::Result;
 use crate::http::headers::{
-    Line, CACHE_CONTROL, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION,
+    CACHE_CONTROL, CONTENT_ENCODING, CONTENT_LENGTH, ETAG, IF_MATCH, IF_NONE_MATCH, LOCATION, Line,
 };
 use crate::http::method;
 use crate::http::request::Request;
@@ -37,7 +37,7 @@ impl Handler {
                     StatusCode::MethodNotAllowed,
                     self.error_headers.iter(),
                     None,
-                )
+                );
             }
         };
         let path = String::from_utf8_lossy(request.path());
@@ -145,7 +145,7 @@ pub(crate) fn build_entry(
         let zip_file_header = ZipLocalFileHeader::from_central_directory(cursor, entry)?;
         let crc32 = zip_file_header.crc32;
         let etag = if headers.iter().any(|it| it.key == CACHE_CONTROL) {
-            let etag = format!("{:x}", crc32);
+            let etag = format!("{crc32:x}");
             trace!(etag = etag.as_str());
             headers.push(Line::with_owned_value(ETAG, etag.as_bytes().to_vec()));
             Some(etag)
@@ -290,20 +290,24 @@ mod tests {
         assert!(handler.paths.get("/about").is_some());
         assert!(handler.paths.get("/about").unwrap().content.is_none());
         assert!(handler.paths.get("/about").unwrap().etag.is_none());
-        assert!(handler
-            .paths
-            .get("/about")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
-        assert!(handler
-            .paths
-            .get("/about")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/about")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
+        assert!(
+            handler
+                .paths
+                .get("/about")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -320,13 +324,15 @@ mod tests {
         assert!(handler.paths.get("/profile.jpg").is_some());
         assert!(handler.paths.get("/profile.jpg").unwrap().content.is_none());
         assert!(handler.paths.get("/profile.jpg").unwrap().etag.is_some());
-        assert!(handler
-            .paths
-            .get("/profile.jpg")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/profile.jpg")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -343,13 +349,15 @@ mod tests {
         assert!(handler.paths.get("/about/").is_some());
         assert!(handler.paths.get("/about/").unwrap().content.is_none());
         assert!(handler.paths.get("/about/").unwrap().etag.is_none());
-        assert!(handler
-            .paths
-            .get("/about/")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/about/")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -401,13 +409,15 @@ mod tests {
         assert!(handler.paths.get("/test/").is_some());
         assert!(handler.paths.get("/test/").unwrap().content.is_none());
         assert!(handler.paths.get("/test/").unwrap().etag.is_none());
-        assert!(handler
-            .paths
-            .get("/test/")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/test/")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -426,13 +436,15 @@ mod tests {
         assert!(handler.paths.get("/test/about").is_some());
         assert!(handler.paths.get("/test/about").unwrap().content.is_none());
         assert!(handler.paths.get("/test/about").unwrap().etag.is_none());
-        assert!(handler
-            .paths
-            .get("/test/about")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/test/about")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -447,25 +459,31 @@ mod tests {
             b"."
         );
         assert!(handler.paths.get("/test/profile.jpg").is_some());
-        assert!(handler
-            .paths
-            .get("/test/profile.jpg")
-            .unwrap()
-            .content
-            .is_none());
-        assert!(handler
-            .paths
-            .get("/test/profile.jpg")
-            .unwrap()
-            .etag
-            .is_some());
-        assert!(handler
-            .paths
-            .get("/test/profile.jpg")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/test/profile.jpg")
+                .unwrap()
+                .content
+                .is_none()
+        );
+        assert!(
+            handler
+                .paths
+                .get("/test/profile.jpg")
+                .unwrap()
+                .etag
+                .is_some()
+        );
+        assert!(
+            handler
+                .paths
+                .get("/test/profile.jpg")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths
@@ -482,13 +500,15 @@ mod tests {
         assert!(handler.paths.get("/test/about/").is_some());
         assert!(handler.paths.get("/test/about/").unwrap().content.is_none());
         assert!(handler.paths.get("/test/about/").unwrap().etag.is_none());
-        assert!(handler
-            .paths
-            .get("/test/about/")
-            .unwrap()
-            .headers
-            .iter()
-            .any(|it| it.key == LOCATION));
+        assert!(
+            handler
+                .paths
+                .get("/test/about/")
+                .unwrap()
+                .headers
+                .iter()
+                .any(|it| it.key == LOCATION)
+        );
         assert_eq!(
             handler
                 .paths

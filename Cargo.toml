@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.18.0"
+version = "0.18.1"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -87,7 +87,7 @@ features = []
 
 [dependencies.tokio]
 optional = true
-version = "1.45"
+version = "1.46"
 default-features = false
 features = ["io-util"]
 
@@ -102,7 +102,8 @@ features = ["_minimal"]
 
 [features]
 default = []
-#default = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
+full = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
+#default = ["full"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
@@ -117,7 +118,7 @@ version = "0.12"
 features = ["blocking", "rustls-tls"]
 
 [dev-dependencies.tokio]
-version = "1.45"
+version = "1.46"
 default-features = false
 features = ["full"]
 
