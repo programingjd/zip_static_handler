@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.18.1"
+version = "0.18.2"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -81,18 +81,18 @@ features = []
 
 [dependencies.salvo]
 optional = true
-version = "0.79"
+version = "0.81"
 default-features = false
 features = []
 
 [dependencies.tokio]
 optional = true
-version = "1.46"
+version = "1.47"
 default-features = false
 features = ["io-util"]
 
 [dependencies.crc32fast]
-version = "1.4"
+version = "1.5"
 
 [dependencies.min_http11_parser]
 optional = true
@@ -101,9 +101,9 @@ default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
+#default = []
 full = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
-#default = ["full"]
+default = ["full"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
@@ -118,7 +118,7 @@ version = "0.12"
 features = ["blocking", "rustls-tls"]
 
 [dev-dependencies.tokio]
-version = "1.46"
+version = "1.47"
 default-features = false
 features = ["full"]
 
@@ -157,7 +157,7 @@ default-features = false
 features = ["http1"]
 
 [dev-dependencies.salvo]
-version = "0.79"
+version = "0.81"
 default-features = false
 features = ["server", "http1", "logging"]
 
