@@ -1,14 +1,13 @@
 use crate::handler::Handler;
+use crate::http::OwnedOrStatic;
 use crate::http::headers::Line;
 use crate::http::request::Request;
 use crate::http::response::StatusCode;
-use crate::http::OwnedOrStatic;
 use bytes::Bytes;
 use rocket::http::uri::Path;
 use rocket::http::{Header, Status};
 use rocket::route::Handler as RocketHandler;
 use rocket::route::Outcome;
-use rocket::serde::__private::from_utf8_lossy;
 use rocket::{Data, Request as RocketRequest, Response};
 use std::borrow::Cow;
 use std::io::Cursor;
@@ -65,10 +64,12 @@ impl<'r> Request<Outcome<'r>> for RequestAdapter<'r, '_> {
         headers.for_each(|ref line| {
             let line = line.as_ref().clone();
             builder.header(Header::new(
-                from_utf8_lossy(line.key),
+                String::from_utf8_lossy(line.key),
                 match line.value {
-                    OwnedOrStatic::Owned(vec) => Cow::Owned(from_utf8_lossy(&vec).to_string()),
-                    OwnedOrStatic::Static(slice) => from_utf8_lossy(slice),
+                    OwnedOrStatic::Owned(vec) => {
+                        Cow::Owned(String::from_utf8_lossy(&vec).to_string())
+                    }
+                    OwnedOrStatic::Static(slice) => String::from_utf8_lossy(slice),
                 },
             ));
         });

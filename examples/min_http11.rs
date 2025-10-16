@@ -5,7 +5,7 @@ use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{
-    copy, sink, split, AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter,
+    AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter, copy, sink, split,
 };
 use tokio::net::TcpListener;
 use tokio::time::timeout;
@@ -58,8 +58,8 @@ pub const KEEP_ALIVE_TIMEOUT: Duration = Duration::from_secs(65);
 pub const MAX_REQUEST_SIZE: u64 = 16_384;
 
 async fn request_loop(
-    mut reader: (impl AsyncRead + Unpin + Sized),
-    mut writer: (impl AsyncWrite + Unpin + Sized),
+    mut reader: impl AsyncRead + Unpin + Sized,
+    mut writer: impl AsyncWrite + Unpin + Sized,
     handler: Arc<Handler>,
 ) {
     let parser = Parser::default().with_request_line_read_timeout(KEEP_ALIVE_TIMEOUT);

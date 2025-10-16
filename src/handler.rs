@@ -24,10 +24,10 @@ impl Handler {
         self.paths.get(path)
     }
     pub fn handle<Resp, Req: Request<Resp>>(&self, request: Req) -> Resp {
-        if let Some(value) = request.first_header_value(CONTENT_LENGTH) {
-            if value != b"0" {
-                return request.response(StatusCode::BadRequest, self.error_headers.iter(), None);
-            }
+        if let Some(value) = request.first_header_value(CONTENT_LENGTH)
+            && value != b"0"
+        {
+            return request.response(StatusCode::BadRequest, self.error_headers.iter(), None);
         }
         let is_get = match request.method() {
             method::GET => true,

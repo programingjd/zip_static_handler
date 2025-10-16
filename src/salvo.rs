@@ -41,10 +41,10 @@ impl Request<()> for RequestAdapter<'_> {
         let status_code: HttpStatusCode = HttpStatusCode::from_u16(code.into()).unwrap();
         let mut map = HeaderMap::new();
         headers.for_each(|line| {
-            if let Ok(name) = HeaderName::from_bytes(line.key) {
-                if let Ok(value) = HeaderValue::from_bytes(line.value.as_ref()) {
-                    map.append(name, value);
-                }
+            if let Ok(name) = HeaderName::from_bytes(line.key)
+                && let Ok(value) = HeaderValue::from_bytes(line.value.as_ref())
+            {
+                map.append(name, value);
             }
         });
         if let Some(bytes) = body {

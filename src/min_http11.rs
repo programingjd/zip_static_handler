@@ -1,5 +1,5 @@
 use crate::handler::{Entry, Handler};
-use crate::http::headers::{Line, LOCATION};
+use crate::http::headers::{LOCATION, Line};
 use crate::http::response::StatusCode;
 use min_http11_parser::error::Error;
 use min_http11_parser::method::Method;
@@ -35,7 +35,7 @@ impl Handler {
         }
     }
 
-    pub fn accept(&self, path: &str) -> Option<Accepted> {
+    pub fn accept(&self, path: &str) -> Option<Accepted<'_>> {
         self.paths.get(path).map(Accepted)
     }
 
@@ -69,12 +69,12 @@ impl Handler {
             }
             Ok((known_headers, _)) => known_headers,
         };
-        if let Some(value) = known_headers.content_length {
-            if value != b"0" {
-                Self::write_status_line(writer, StatusCode::BadRequest).await?;
-                self.write_error_headers(writer, true).await?;
-                return None;
-            }
+        if let Some(value) = known_headers.content_length
+            && value != b"0"
+        {
+            Self::write_status_line(writer, StatusCode::BadRequest).await?;
+            self.write_error_headers(writer, true).await?;
+            return None;
         }
         Self::write_status_line(writer, StatusCode::NotFound).await?;
         self.write_error_headers(writer, true).await?;
@@ -113,12 +113,12 @@ impl Handler {
             }
             Ok((known_headers, _)) => known_headers,
         };
-        if let Some(value) = known_headers.content_length {
-            if value != b"0" {
-                Self::write_status_line(writer, StatusCode::BadRequest).await?;
-                self.write_error_headers(writer, true).await?;
-                return None;
-            }
+        if let Some(value) = known_headers.content_length
+            && value != b"0"
+        {
+            Self::write_status_line(writer, StatusCode::BadRequest).await?;
+            self.write_error_headers(writer, true).await?;
+            return None;
         }
         let is_get = match method {
             Method::Get => true,

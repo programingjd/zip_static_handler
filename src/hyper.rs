@@ -45,10 +45,10 @@ impl Request<HyperResponse> for RequestAdapter {
         let mut builder = hyper::Response::builder().status(code);
         let map = builder.headers_mut().unwrap();
         headers.for_each(|line| {
-            if let Ok(name) = HeaderName::from_bytes(line.key) {
-                if let Ok(value) = HeaderValue::from_bytes(line.value.as_ref()) {
-                    map.append(name, value);
-                }
+            if let Ok(name) = HeaderName::from_bytes(line.key)
+                && let Ok(value) = HeaderValue::from_bytes(line.value.as_ref())
+            {
+                map.append(name, value);
             }
         });
         let body = body
