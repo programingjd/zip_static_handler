@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.18.3"
+version = "0.18.5"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -28,7 +28,7 @@ default-features = false
 features = ["std"]
 
 [dependencies.bytes]
-version = "1.10"
+version = "1.11"
 default-features = false
 features = ["std"]
 
@@ -39,7 +39,7 @@ features = ["std", "attributes"]
 
 [dependencies.hyper]
 optional = true
-version = "1.6"
+version = "1.8"
 default-features = false
 features = []
 
@@ -51,7 +51,7 @@ features = []
 
 [dependencies.http]
 optional = true
-version = "1.3"
+version = "1.4"
 default-features = false
 features = ["std"]
 
@@ -63,7 +63,7 @@ features = []
 
 [dependencies.actix-web]
 optional = true
-version = "4.11"
+version = "4.12"
 default-features = false
 features = []
 
@@ -81,7 +81,7 @@ features = []
 
 [dependencies.salvo]
 optional = true
-version = "0.84"
+version = "0.85"
 default-features = false
 features = []
 
@@ -96,14 +96,14 @@ version = "1.5"
 
 [dependencies.min_http11_parser]
 optional = true
-version = "0.2"
+version = "0.3"
 default-features = false
 features = ["_minimal"]
 
 [features]
-default = []
+#default = []
 full = ["hyper", "axum", "actix", "rocket", "xitca", "salvo", "min_http11"]
-#default = ["full"]
+default = ["full"]
 hyper = ["dep:hyper", "dep:http-body-util"]
 axum = ["dep:axum-core", "dep:http"]
 actix = ["dep:actix-web"]
@@ -137,7 +137,7 @@ features = ["tokio", "http1", "tracing"]
 # for the actix example
 
 [dev-dependencies.actix-web]
-version = "4.11"
+version = "4.12"
 default-features = false
 features = ["macros"]
 
@@ -157,7 +157,7 @@ default-features = false
 features = ["http1"]
 
 [dev-dependencies.salvo]
-version = "0.84"
+version = "0.85"
 default-features = false
 features = ["server", "http1", "logging"]
 
