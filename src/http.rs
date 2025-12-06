@@ -126,9 +126,15 @@ pub mod response {
         Forbidden,
         NotFound,
         MethodNotAllowed,
+        RequestTimeout,
         PreconditionFailed,
         RequestTooLarge,
+        TooManyRequests,
         InternalServerError,
+        NotImplemented,
+        BadGateway,
+        ServiceUnavailable,
+        GatewayTimeout,
     }
 
     impl From<StatusCode> for u16 {
@@ -144,9 +150,15 @@ pub mod response {
                 StatusCode::Forbidden => 403,
                 StatusCode::NotFound => 404,
                 StatusCode::MethodNotAllowed => 405,
+                StatusCode::RequestTimeout => 408,
                 StatusCode::PreconditionFailed => 412,
                 StatusCode::RequestTooLarge => 413,
+                StatusCode::TooManyRequests => 429,
                 StatusCode::InternalServerError => 500,
+                StatusCode::NotImplemented => 501,
+                StatusCode::BadGateway => 502,
+                StatusCode::ServiceUnavailable => 503,
+                StatusCode::GatewayTimeout => 504,
             }
         }
     }

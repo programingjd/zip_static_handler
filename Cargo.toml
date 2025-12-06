@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.18.5"
+version = "0.19.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]

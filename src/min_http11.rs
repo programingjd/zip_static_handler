@@ -176,9 +176,15 @@ impl Handler {
                 StatusCode::Forbidden => b"HTTP/1.1 403 Forbidden\r\n",
                 StatusCode::NotFound => b"HTTP/1.1 404 Not Found\r\n",
                 StatusCode::MethodNotAllowed => b"HTTP/1.1 405 Method Not Allowed\r\n",
+                StatusCode::RequestTimeout => b"HTTP/1.1 408 Request Timeout\r\n",
                 StatusCode::PreconditionFailed => b"HTTP/1.1 412 Precondition Failed\r\n",
                 StatusCode::RequestTooLarge => b"HTTP/1.1 413 Request Too Large\r\n",
+                StatusCode::TooManyRequests => b"HTTP/1.1 429 Too Many Requests\r\n",
                 StatusCode::InternalServerError => b"HTTP/1.1 500 Internal Server Error\r\n",
+                StatusCode::NotImplemented => b"HTTP/1.1 501 Not Implemented\r\n",
+                StatusCode::BadGateway => b"HTTP/1.1 502 Bad Gateway\r\n",
+                StatusCode::ServiceUnavailable => b"HTTP/1.1 503 Service Unavailable\r\n",
+                StatusCode::GatewayTimeout => b"HTTP/1.1 504 Gateway Timeout\r\n",
             })
             .await
             .ok()
