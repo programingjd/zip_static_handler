@@ -6,11 +6,10 @@ use bytes::Bytes;
 use std::str::from_utf8;
 use xitca_http::body::ResponseBody;
 use xitca_http::http;
-use xitca_http::http::IntoResponse;
-use xitca_http::http::{HeaderName, HeaderValue, Response};
+use xitca_http::http::{HeaderName, HeaderValue, IntoResponse, Response};
 
 type HttpStatusCode = http::StatusCode;
-type XitcaRequest<E> = http::Request<xitca_http::http::RequestExt<E>>;
+type XitcaRequest<E> = http::Request<http::RequestExt<E>>;
 
 impl Handler {
     pub fn handle_xitca_request<E>(&self, req: XitcaRequest<E>) -> Response<ResponseBody> {

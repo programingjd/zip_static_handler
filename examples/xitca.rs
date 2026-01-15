@@ -1,9 +1,9 @@
 use reqwest::Client;
 use std::borrow::Borrow;
 use std::sync::Arc;
-use xitca_web::body::ResponseBody;
-use xitca_web::handler::handler_service;
-use xitca_web::http::{Request, RequestExt, Response};
+use xitca_http::body::ResponseBody;
+use xitca_http::http::RequestExt;
+use xitca_http::{util::service::handler::handler_service, Request, Response};
 use xitca_web::route::get;
 use xitca_web::{App, WebContext};
 use zip_static_handler::github::zip_download_branch_url;

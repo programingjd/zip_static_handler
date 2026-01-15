@@ -5,7 +5,7 @@ use reqwest::Client;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{
-    AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter, copy, sink, split,
+    copy, sink, split, AsyncBufRead, AsyncRead, AsyncWrite, AsyncWriteExt, BufReader, BufWriter,
 };
 use tokio::net::TcpListener;
 use tokio::time::timeout;

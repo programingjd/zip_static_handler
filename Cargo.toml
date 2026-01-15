@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.19.0"
+version = "0.20.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -81,13 +81,13 @@ features = []
 
 [dependencies.salvo]
 optional = true
-version = "0.85"
+version = "0.88"
 default-features = false
 features = []
 
 [dependencies.tokio]
 optional = true
-version = "1.48"
+version = "1.49"
 default-features = false
 features = ["io-util"]
 
@@ -115,10 +115,16 @@ min_http11 = ["min_http11_parser/_minimal", "dep:tokio"]
 #http client for downloading zip from github
 [dev-dependencies.reqwest]
 version = "0.12"
-features = ["blocking", "rustls-tls"]
+default-features = false
+features = ["blocking", "rustls-tls-webpki-roots"]
+
+[dev-dependencies.ring]
+version = "0.17"
+default-features = false
+features = ["std"]
 
 [dev-dependencies.tokio]
-version = "1.48"
+version = "1.49"
 default-features = false
 features = ["full"]
 
@@ -157,7 +163,7 @@ default-features = false
 features = ["http1"]
 
 [dev-dependencies.salvo]
-version = "0.85"
+version = "0.88"
 default-features = false
 features = ["server", "http1", "logging"]
 
