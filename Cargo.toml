@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.20.2"
+version = "0.21.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -96,7 +96,7 @@ version = "1.5"
 
 [dependencies.min_http11_parser]
 optional = true
-version = "0.3"
+version = "0.4"
 default-features = false
 features = ["_minimal"]
 

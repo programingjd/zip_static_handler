@@ -62,11 +62,15 @@ async fn request_loop(
     mut writer: impl AsyncWrite + Unpin + Sized,
     handler: Arc<Handler>,
 ) {
-    let parser = Parser::default().with_request_line_read_timeout(KEEP_ALIVE_TIMEOUT);
+    let parser = Parser::default()
+        .with_request_line_read_timeout(KEEP_ALIVE_TIMEOUT)
+        .with_body_read_timeout(Duration::from_millis(200))
+        .with_body_max_size(64);
     let mut reader = BufReader::new(&mut reader);
     let mut writer = BufWriter::new(&mut writer);
     let mut buffer1 = vec![];
     let mut buffer2 = vec![];
+    let mut buffer3 = vec![];
     while let Ok((method, path)) = parser.parse_request_line(&mut reader, &mut buffer1).await {
         match path {
             b"/healthcheck" => {
@@ -93,6 +97,7 @@ async fn request_loop(
                             &mut reader,
                             &mut writer,
                             &mut buffer2,
+                            &mut buffer3,
                         )
                         .await
                 } else {

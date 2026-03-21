@@ -3,7 +3,7 @@ use crate::http::headers::{Line, LOCATION};
 use crate::http::response::StatusCode;
 use min_http11_parser::error::Error;
 use min_http11_parser::method::Method;
-use min_http11_parser::parser::Parser;
+use min_http11_parser::parser::{BodyEncoding, Parser};
 use tokio::io::{AsyncBufRead, AsyncWrite, AsyncWriteExt};
 
 pub struct Accepted<'a>(&'a Entry);
@@ -88,7 +88,8 @@ impl Handler {
         parser: &Parser,
         reader: &mut R,
         writer: &mut W,
-        buffer: &mut Vec<u8>,
+        buffer1: &mut Vec<u8>,
+        buffer2: &mut Vec<u8>,
     ) -> Option<()> {
         let entry = accepted.0;
         match method {
@@ -99,7 +100,7 @@ impl Handler {
                 return None;
             }
         }
-        let known_headers = match parser.parse_headers(reader, buffer).await {
+        let known_headers = match parser.parse_headers(reader, buffer1).await {
             Err(Error::ReadTimeout) => return None,
             Err(Error::RequestTooLarge) => {
                 Self::write_status_line(writer, StatusCode::RequestTooLarge).await?;
@@ -113,18 +114,6 @@ impl Handler {
             }
             Ok((known_headers, _)) => known_headers,
         };
-        if let Some(value) = known_headers.content_length
-            && value != b"0"
-        {
-            Self::write_status_line(writer, StatusCode::BadRequest).await?;
-            self.write_error_headers(writer, true).await?;
-            return None;
-        }
-        if known_headers.transfer_encoding.is_some() {
-            Self::write_status_line(writer, StatusCode::BadRequest).await?;
-            self.write_error_headers(writer, true).await?;
-            return None;
-        }
         let is_get = match method {
             Method::Get => true,
             Method::Head => false,
@@ -134,6 +123,23 @@ impl Handler {
                 return None;
             }
         };
+        match parser.body_encoding(&known_headers) {
+            Ok(BodyEncoding::Identity { content_length }) if content_length == 0 => {}
+            Ok(encoding @ BodyEncoding::Chunked) => {
+                match parser.parse_body(reader, buffer2, encoding).await {
+                    Ok(body) if body.is_empty() => {}
+                    _ => {
+                        Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                        self.write_error_headers(writer, true).await?;
+                        return None;
+                    }
+                }
+            }
+            _ => {
+                Self::write_status_line(writer, StatusCode::BadRequest).await?;
+                self.write_error_headers(writer, true).await?;
+            }
+        }
         let headers = &entry.headers;
         if entry.etag.is_some() {
             let etag = entry.etag.as_ref().map(|it| it.as_bytes());
