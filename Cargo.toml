@@ -1,6 +1,6 @@
 [package]
 name = "zip_static_handler"
-version = "0.21.0"
+version = "0.22.0"
 edition = "2024"
 authors = ["Jerome David <programingjd@gmail.com>"]
 categories = ["web-programming::http-server"]
@@ -39,7 +39,7 @@ features = ["std", "attributes"]
 
 [dependencies.hyper]
 optional = true
-version = "1.8"
+version = "1.9"
 default-features = false
 features = []
 
@@ -81,13 +81,13 @@ features = []
 
 [dependencies.salvo]
 optional = true
-version = "0.89"
+version = "0.91"
 default-features = false
 features = []
 
 [dependencies.tokio]
 optional = true
-version = "1.50"
+version = "1.51"
 default-features = false
 features = ["io-util"]
 
@@ -124,7 +124,7 @@ default-features = false
 features = ["std"]
 
 [dev-dependencies.tokio]
-version = "1.50"
+version = "1.51"
 default-features = false
 features = ["full"]
 
@@ -158,7 +158,7 @@ default-features = false
 features = ["http1"]
 
 [dev-dependencies.salvo]
-version = "0.89"
+version = "0.91"
 default-features = false
 features = ["server", "http1", "logging"]
 

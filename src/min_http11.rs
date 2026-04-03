@@ -81,6 +81,7 @@ impl Handler {
         Some(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn handle_path<R: AsyncBufRead + Unpin, W: AsyncWrite + Unpin>(
         &self,
         method: &Method,
@@ -124,10 +125,10 @@ impl Handler {
             }
         };
         match parser.body_encoding(&known_headers) {
-            Ok(BodyEncoding::Identity { content_length }) if content_length == 0 => {}
+            Ok(BodyEncoding::Identity { content_length: 0 }) => {}
             Ok(encoding @ BodyEncoding::Chunked) => {
                 match parser.parse_body(reader, buffer2, encoding).await {
-                    Ok(body) if body.is_empty() => {}
+                    Ok([]) => {}
                     _ => {
                         Self::write_status_line(writer, StatusCode::BadRequest).await?;
                         self.write_error_headers(writer, true).await?;
