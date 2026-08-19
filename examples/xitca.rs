@@ -13,7 +13,7 @@ use zip_static_handler::handler::Handler;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .compact()
-        .with_env_filter("zip_static_handler=info,axum::rejection=trace")
+        .with_env_filter("zip_static_handler=info")
         .without_time()
         .with_line_number(false)
         .with_file(false)
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     App::new()
         .with_state(state)
-        .at("/*", get(handler_service(static_handler)))
+        .at("/{*}", get(handler_service(static_handler)))
         .serve()
         .bind("127.0.0.1:8080")?
         .run()
